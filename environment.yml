@@ -1,0 +1,12 @@
+name: sorscher_reproduction
+dependencies:
+  - python=3.10
+  - scipy
+  - matplotlib
+  - numpy
+  - pandas
+  - pytorch
+  - pytorch-lightning
+  - scipy
+  - seaborn
+  - wandb
