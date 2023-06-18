@@ -22,9 +22,9 @@ class TrajectoryDataset(Dataset):
         self.dataset_dir = os.path.join(run_checkpoint_dir, 'data', split)
         self.split = split
         if self.split == 'train':
-            self.length = self.wandb_config['batch_size'] * self.wandb_config['n_batches_per_epoch']
+            self.length = self.wandb_config['batch_size_train'] * self.wandb_config['n_batches_per_epoch']
         elif self.split == 'val':
-            self.length = self.wandb_config['batch_size']
+            self.length = self.wandb_config['batch_size_val']
         else:
             raise ValueError('Invalid split: {}'.format(self.split))
 
@@ -42,7 +42,7 @@ class TrajectoryDataset(Dataset):
                 # Remove the batch dimension.
                 generated_data = {k: v[0] for k, v in generated_data.items()}
                 np.savez(file=os.path.join(self.dataset_dir, f'{i}'),
-                        **generated_data)
+                         **generated_data)
 
         elif self.wandb_config['data_generation'] == 'sampled_at_every_step':
             pass
@@ -99,7 +99,6 @@ class TrajectoryDataModule(pl.LightningDataModule):
         self.pin_memory = torch.cuda.is_available()
 
     def setup(self, stage: str):
-
         self.train_dataset = TrajectoryDataset(
             wandb_config=self.wandb_config,
             run_checkpoint_dir=self.run_checkpoint_dir,
@@ -162,7 +161,6 @@ def generate_trajectory(batch_size: int,
                         mu: float = 0.0,
                         sigma: float = 5.76 * 2  # stdev rotation velocity (rads/sec)
                         ):
-
     # initialize variables
     position = np.zeros((batch_size, sequence_length + 1, 2), dtype=float)
     head_dir = np.zeros((batch_size, sequence_length + 1), dtype=float)
@@ -181,7 +179,8 @@ def generate_trajectory(batch_size: int,
         v = np.random.rayleigh(b)
         for i in range(1, sequence_length + 1):
             # If in border region, turn and slow down
-            d_wall, a_wall = min_dist_angle(position[batch_idx, i - 1], head_dir[batch_idx, i - 1] % (2 * np.pi), box_size)
+            d_wall, a_wall = min_dist_angle(position[batch_idx, i - 1], head_dir[batch_idx, i - 1] % (2 * np.pi),
+                                            box_size)
             if d_wall < border_region and np.abs(a_wall) < np.pi / 2:
                 turning[batch_idx, i - 1] = 1
                 turn_angle = np.sign(a_wall) * (np.pi / 2 - np.abs(a_wall)) + dt * random_turn[i]
@@ -192,7 +191,8 @@ def generate_trajectory(batch_size: int,
             # Take a step
             ego_speed[batch_idx, i - 1] = v * dt
             position[batch_idx, i] = position[batch_idx, i - 1] + ego_speed[batch_idx, i - 1] * \
-                                     np.asarray([np.cos(head_dir[batch_idx, i - 1]), np.sin(head_dir[batch_idx, i - 1])])
+                                     np.asarray(
+                                         [np.cos(head_dir[batch_idx, i - 1]), np.sin(head_dir[batch_idx, i - 1])])
             # Rotate head direction
             head_dir[batch_idx, i] = head_dir[batch_idx, i - 1] + turn_angle
 

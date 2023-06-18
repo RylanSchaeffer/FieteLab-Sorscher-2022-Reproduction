@@ -10,7 +10,6 @@ from src.ensembles import CellEnsemble, PlaceCellEnsemble, HeadDirectionCellEnse
 from src.plot import plot_lattice_scores_by_nbins, plot_ratemaps_2d
 from src.scores import compute_lattice_scores_from_ratemaps_2d, create_grid_scorers
 
-
 ce_loss_fn = torch.nn.CrossEntropyLoss(reduction='none')
 
 
@@ -71,11 +70,22 @@ class GridCellSystem(pl.LightningModule):
         )
 
         for loss_str, loss_val in loss_results.items():
-            self.log(f'losses_train/{loss_str}',
+            self.log(f'train/loss={loss_str}',
                      loss_val,
                      on_step=True,
                      on_epoch=False,
                      sync_dist=True)
+
+        pos_decoding_err = self.compute_pos_decoding_err(
+            activations=forward_results['g_activations'],
+            target_pos=batch['target_pos'],
+        )
+
+        self.log(f'train/pos_decoding_err',
+                 pos_decoding_err,
+                 on_step=True,
+                 on_epoch=False,
+                 sync_dist=True)
 
         return loss_results['loss']
 
@@ -99,46 +109,68 @@ class GridCellSystem(pl.LightningModule):
         )
 
         for loss_str, loss_val in loss_results.items():
-            self.log(f'losses_val/{loss_str}',
+            self.log(f'val/loss={loss_str}',
                      loss_val,
                      on_step=True,
                      on_epoch=False,
                      sync_dist=True)
 
-        if batch_idx == 0:
+        pos_decoding_err = self.compute_pos_decoding_err(
+            activations=forward_results['g_activations'],
+            target_pos=batch['target_pos'],
+        )
 
-            positions_numpy = batch['target_pos'].detach().numpy()
-            activations_numpy = forward_results['pc_logits'].detach().numpy()
+        self.log(f'val/pos_decoding_err',
+                 pos_decoding_err,
+                 on_step=True,
+                 on_epoch=False,
+                 sync_dist=True)
 
-            # ratemaps_2d has shape (n_units, nbins_y, nbins_x)
-            ratemaps_2d, extreme_coords = compute_ratemaps_2d(
-                positions=positions_numpy,
-                activations=activations_numpy,
-                coords_range=self.ratemaps_coords_range,
-                bin_side_in_m=self.wandb_config['bin_side_in_m'])
+        positions_numpy = batch['target_pos'].detach().numpy()
+        lstm_activations_numpy = forward_results['lstm_activations'].detach().numpy()
+        g_activations_numpy = forward_results['g_activations'].detach().numpy()
+        pc_logits_numpy = forward_results['pc_logits'].detach().numpy()
 
-            plot_ratemaps_2d(ratemaps=ratemaps_2d,
-                             extreme_coords=extreme_coords,
-                             wandb_logger=self.wandb_logger)
+        # ratemaps_2d has shape (n_units, nbins_y, nbins_x)
+        ratemaps_2d, extreme_coords = compute_ratemaps_2d(
+            positions=positions_numpy,
+            activations=pc_logits_numpy,
+            coords_range=self.ratemaps_coords_range,
+            bin_side_in_m=self.wandb_config['bin_side_in_m'])
 
-            scorers = create_grid_scorers(
-                left=extreme_coords['left'],
-                right=extreme_coords['right'],
-                top=extreme_coords['top'],
-                bottom=extreme_coords['bottom'],
-                nbins_list=[ratemaps_2d.shape[1]],  # we're hijacking the previous DeepMind code.
-            )
+        plot_ratemaps_2d(ratemaps=ratemaps_2d,
+                         extreme_coords=extreme_coords,
+                         wandb_logger=self.wandb_logger)
 
-            lattice_scores_by_nbins_dict = compute_lattice_scores_from_ratemaps_2d(
-                ratemaps_2d=ratemaps_2d,
-                scorers=scorers,
-                n_recurr_units_to_analyze=ratemaps_2d.shape[0],
-            )
+        scorers = create_grid_scorers(
+            left=extreme_coords['left'],
+            right=extreme_coords['right'],
+            top=extreme_coords['top'],
+            bottom=extreme_coords['bottom'],
+            nbins_list=[ratemaps_2d.shape[1]],  # we're hijacking the previous DeepMind code.
+        )
 
-            plot_lattice_scores_by_nbins(
-                lattice_scores_by_nbins_dict=lattice_scores_by_nbins_dict,
-                wandb_logger=self.wandb_logger,
-            )
+        lattice_scores_by_nbins_dict = compute_lattice_scores_from_ratemaps_2d(
+            ratemaps_2d=ratemaps_2d,
+            scorers=scorers,
+            n_recurr_units_to_analyze=ratemaps_2d.shape[0],
+        )
+
+        quantiles = [0.5, 0.75, 0.9, 0.95, 0.99]
+        score_90_quantiles = np.quantile(
+            a=lattice_scores_by_nbins_dict[ratemaps_2d.shape[1]]['score_90_by_neuron'],
+            q=quantiles)
+        for q, s in zip(quantiles, score_90_quantiles):
+            self.log(f'val/score_90_quant={q}',
+                     s,
+                     on_step=True,
+                     on_epoch=False,
+                     sync_dist=True)
+
+        plot_lattice_scores_by_nbins(
+            lattice_scores_by_nbins_dict=lattice_scores_by_nbins_dict,
+            wandb_logger=self.wandb_logger,
+        )
 
     def compute_inputs(self,
                        batch: Dict[str, torch.Tensor]):
@@ -173,6 +205,28 @@ class GridCellSystem(pl.LightningModule):
             'loss': loss,
         }
         return losses_results
+
+    def compute_pos_decoding_err(self,
+                                 activations: torch.Tensor,
+                                 target_pos: torch.Tensor,
+                                 ) -> torch.Tensor:
+
+        _, top_k_indices = torch.topk(activations, k=3)
+
+        # Make sure top_k_indices is of type long, as it's required for indexing
+        top_k_indices = top_k_indices.long()
+
+        # Reshape the tensor (in PyTorch you can use view instead of reshape)
+        reshaped_means = self.pc_ensemble.means.view(-1, 2)
+
+        # Gathering using advanced indexing
+        gathered_means = reshaped_means[top_k_indices]
+
+        # Compute the mean across the second-to-last dimension (-2)
+        pred_pos = torch.mean(gathered_means, dim=-2)
+        pos_decoding_err = torch.mean(torch.linalg.norm(pred_pos - target_pos, dim=2))
+
+        return pos_decoding_err
 
     def compute_targets(self,
                         batch: Dict[str, torch.Tensor]):
@@ -338,8 +392,10 @@ class SorscherRecurrentNetwork(pl.LightningModule):
 
         lstm_activations, (lstm_h_n, lstm_c_n) = self.recurrent_layer(
             recurrent_inputs,
-            (added_init_activations[:, :, :self.wandb_config['n_hidden_units']].transpose(0, 1),  # We need to swap batch & time dimension ourselves.
-             added_init_activations[:, :, self.wandb_config['n_hidden_units']:].transpose(0, 1),  # We need to swap batch & time dimension ourselves.
+            (added_init_activations[:, :, :self.wandb_config['n_hidden_units']].transpose(0, 1),
+             # We need to swap batch & time dimension ourselves.
+             added_init_activations[:, :, self.wandb_config['n_hidden_units']:].transpose(0, 1),
+             # We need to swap batch & time dimension ourselves.
              )
         )
         g_activations = self.readout_one_layer(lstm_activations)

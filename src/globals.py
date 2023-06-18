@@ -1,7 +1,5 @@
 default_config = {
     'accumulate_grad_batches': 'None',
-    'activation': 'shifted_gelu',
-    'activations_initialization': 'uniform_same',
     'auto_lr_find': False,
     # 'auto_lr_find': True,
     'auto_scale_batch_size': 'None',
@@ -21,7 +19,7 @@ default_config = {
     'learning_rate': 0.01,
     'learning_rate_scheduler': 'None',
     'n_epochs': 11,
-    'n_batches_per_epoch': 13,
+    'n_batches_per_epoch': 100,
     'n_head_direction_cells': 12,
     'n_hidden_units': 32,
     'n_readout_units': 64,
