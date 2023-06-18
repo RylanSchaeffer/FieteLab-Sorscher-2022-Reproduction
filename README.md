@@ -10,6 +10,10 @@ To activate the environment:
 
 `conda activate sorscher_reproduction`
 
+Then install wandb with pip following the instructions [here](https://docs.wandb.ai/guides/technical-faq/setup).
+
+`pip install wandb`
+
 ## Creating a Sweep
 
 To create a sweep, run the following command at the CLI:

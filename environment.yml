@@ -9,4 +9,4 @@ dependencies:
   - pytorch-lightning
   - scipy
   - seaborn
-  - wandb
+  - scikit-image

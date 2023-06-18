@@ -1,6 +1,7 @@
 import numpy as np
 import json
 import os
+import pprint
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import DeviceStatsMonitor, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
@@ -11,10 +12,10 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import wandb
 
-from ssl_gc.globals import default_config
-from ssl_gc.run import load_pretrained_model, set_seed
-from ssl_gc.systems import SSLGridCellSystem
-from ssl_gc.trajectory_generator import TrajectoryDataModule
+from src.globals import default_config
+from src.run import set_seed
+from src.systems import GridCellSystem
+from src.data import TrajectoryDataModule
 
 # Torch settings.
 torch.autograd.set_detect_anomaly(True)
@@ -31,7 +32,7 @@ wandb_config = dict(wandb.config)
 
 # Convert "None" (type: str) to None (type: NoneType)
 for key in ['accumulate_grad_batches', 'auto_scale_batch_size', 'gradient_clip_val',
-            'learning_rate_scheduler', 'mask_type']:
+            'learning_rate_scheduler']:
     if isinstance(wandb_config[key], str):
         if wandb_config[key] == "None":
             wandb_config[key] = None
@@ -45,11 +46,9 @@ with open(os.path.join(run_checkpoint_dir, 'wandb_config.json'), 'w') as fp:
 # Make sure we set all seeds for maximal reproducibility!
 torch_generator = set_seed(seed=wandb_config['seed'])
 
-
 wandb_logger = WandbLogger(experiment=run)
-system = SSLGridCellSystem(wandb_config=wandb_config,
-                           wandb_logger=wandb_logger)
-
+system = GridCellSystem(wandb_config=wandb_config,
+                        wandb_logger=wandb_logger)
 
 # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.callbacks.LearningRateMonitor.html
 lr_monitor_callback = LearningRateMonitor(
@@ -81,10 +80,9 @@ else:
 
 trajectory_datamodule = TrajectoryDataModule(
     wandb_config=wandb_config,
-    batch_size=wandb_config['batch_size'],
+    run_checkpoint_dir=run_checkpoint_dir,
     torch_generator=torch_generator,
 )
-
 
 # https://pytorch-lightning.readthedocs.io/en/latest/api/pytorch_lightning.trainer.trainer.Trainer.html
 trainer = pl.Trainer(
@@ -94,12 +92,12 @@ trainer = pl.Trainer(
     auto_scale_batch_size=False,
     # auto_scale_batch_size=wandb_config['auto_scale_batch_size'],
     callbacks=callbacks,
-    check_val_every_n_epoch=3,  # default
+    check_val_every_n_epoch=1,  # default
     default_root_dir=run_checkpoint_dir,
     deterministic=True,
     devices=devices,
     logger=wandb_logger,  # min_epochs=50,
-    log_every_n_steps=500,
+    log_every_n_steps=50,
     # overfit_batches=1,  # useful for debugging
     gradient_clip_val=wandb_config['gradient_clip_val'],
     # gradient_clip_val=None,  # default
@@ -127,6 +125,10 @@ if __name__ == '__main__':
         print('Reminder: tuning learning rate or batch size is not yet implemented.')
     else:
         print('Not tuning learning rate or batch size.')
+
+    pp = pprint.PrettyPrinter(indent=4)
+    print('W&B Config:')
+    pp.pprint(wandb_config)
 
     trainer.fit(
         model=system,
