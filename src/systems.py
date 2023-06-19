@@ -111,8 +111,8 @@ class GridCellSystem(pl.LightningModule):
         for loss_str, loss_val in loss_results.items():
             self.log(f'val/loss={loss_str}',
                      loss_val,
-                     on_step=True,
-                     on_epoch=False,
+                     on_step=False,
+                     on_epoch=True,
                      sync_dist=True)
 
         pos_decoding_err = self.compute_pos_decoding_err(
@@ -122,8 +122,8 @@ class GridCellSystem(pl.LightningModule):
 
         self.log(f'val/pos_decoding_err',
                  pos_decoding_err,
-                 on_step=True,
-                 on_epoch=False,
+                 on_step=False,
+                 on_epoch=True,
                  sync_dist=True)
 
         positions_numpy = batch['target_pos'].detach().numpy()
@@ -163,8 +163,8 @@ class GridCellSystem(pl.LightningModule):
         for q, s in zip(quantiles, score_90_quantiles):
             self.log(f'val/score_90_quant={q}',
                      s,
-                     on_step=True,
-                     on_epoch=False,
+                     on_step=False,
+                     on_epoch=True,
                      sync_dist=True)
 
         plot_lattice_scores_by_nbins(

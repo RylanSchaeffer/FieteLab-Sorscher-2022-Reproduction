@@ -29,7 +29,7 @@ default_config = {
     'precision': 32,
     'rnn_type': 'lstm',
     'seed': 0,
-    'sequence_length': 100,
+    'sequence_length': 31,
     'use_bias': False,
     'weight_decay': 1e-5,
     # 'weight_decay': 0.0,

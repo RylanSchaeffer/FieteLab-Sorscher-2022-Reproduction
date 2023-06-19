@@ -10,7 +10,7 @@ To activate the environment:
 
 `conda activate sorscher_reproduction`
 
-Then install wandb with pip following the instructions [here](https://docs.wandb.ai/guides/technical-faq/setup).
+Then install wandb with pip, recommended by W&B [here](https://docs.wandb.ai/guides/technical-faq/setup).
 
 `pip install wandb`
 
