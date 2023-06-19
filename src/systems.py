@@ -129,48 +129,51 @@ class GridCellSystem(pl.LightningModule):
         positions_numpy = batch['target_pos'].detach().numpy()
         lstm_activations_numpy = forward_results['lstm_activations'].detach().numpy()
         g_activations_numpy = forward_results['g_activations'].detach().numpy()
-        pc_logits_numpy = forward_results['pc_logits'].detach().numpy()
 
-        # ratemaps_2d has shape (n_units, nbins_y, nbins_x)
-        ratemaps_2d, extreme_coords = compute_ratemaps_2d(
-            positions=positions_numpy,
-            activations=pc_logits_numpy,
-            coords_range=self.ratemaps_coords_range,
-            bin_side_in_m=self.wandb_config['bin_side_in_m'])
+        for activations_array, activation_str in [(lstm_activations_numpy, 'lstm'), (g_activations_numpy, 'g')]:
 
-        plot_ratemaps_2d(ratemaps=ratemaps_2d,
-                         extreme_coords=extreme_coords,
-                         wandb_logger=self.wandb_logger)
+            # ratemaps_2d has shape (n_units, nbins_y, nbins_x)
+            ratemaps_2d, extreme_coords = compute_ratemaps_2d(
+                positions=positions_numpy,
+                activations=activations_array,
+                coords_range=self.ratemaps_coords_range,
+                bin_side_in_m=self.wandb_config['bin_side_in_m'])
 
-        scorers = create_grid_scorers(
-            left=extreme_coords['left'],
-            right=extreme_coords['right'],
-            top=extreme_coords['top'],
-            bottom=extreme_coords['bottom'],
-            nbins_list=[ratemaps_2d.shape[1]],  # we're hijacking the previous DeepMind code.
-        )
+            plot_ratemaps_2d(ratemaps=ratemaps_2d,
+                             extreme_coords=extreme_coords,
+                             wandb_logger=self.wandb_logger,
+                             wandb_key=f'{activation_str}_ratemaps_2d')
 
-        lattice_scores_by_nbins_dict = compute_lattice_scores_from_ratemaps_2d(
-            ratemaps_2d=ratemaps_2d,
-            scorers=scorers,
-            n_recurr_units_to_analyze=ratemaps_2d.shape[0],
-        )
+            scorers = create_grid_scorers(
+                left=extreme_coords['left'],
+                right=extreme_coords['right'],
+                top=extreme_coords['top'],
+                bottom=extreme_coords['bottom'],
+                nbins_list=[ratemaps_2d.shape[1]],  # we're hijacking the previous DeepMind code.
+            )
 
-        quantiles = [0.5, 0.75, 0.9, 0.95, 0.99]
-        score_90_quantiles = np.quantile(
-            a=lattice_scores_by_nbins_dict[ratemaps_2d.shape[1]]['score_90_by_neuron'],
-            q=quantiles)
-        for q, s in zip(quantiles, score_90_quantiles):
-            self.log(f'val/score_90_quant={q}',
-                     s,
-                     on_step=False,
-                     on_epoch=True,
-                     sync_dist=True)
+            lattice_scores_by_nbins_dict = compute_lattice_scores_from_ratemaps_2d(
+                ratemaps_2d=ratemaps_2d,
+                scorers=scorers,
+                n_recurr_units_to_analyze=ratemaps_2d.shape[0],
+            )
 
-        plot_lattice_scores_by_nbins(
-            lattice_scores_by_nbins_dict=lattice_scores_by_nbins_dict,
-            wandb_logger=self.wandb_logger,
-        )
+            quantiles = [0.5, 0.75, 0.9, 0.95, 0.99]
+            score_90_quantiles = np.quantile(
+                a=lattice_scores_by_nbins_dict[ratemaps_2d.shape[1]]['score_90_by_neuron'],
+                q=quantiles)
+            for q, s in zip(quantiles, score_90_quantiles):
+                self.log(f'val/{activation_str}_score_90_quant={q}',
+                         s,
+                         on_step=False,
+                         on_epoch=True,
+                         sync_dist=True)
+
+            plot_lattice_scores_by_nbins(
+                lattice_scores_by_nbins_dict=lattice_scores_by_nbins_dict,
+                wandb_logger=self.wandb_logger,
+                wandb_key=f'{activation_str}_lattice_scores_by_nbins',
+            )
 
     def compute_inputs(self,
                        batch: Dict[str, torch.Tensor]):

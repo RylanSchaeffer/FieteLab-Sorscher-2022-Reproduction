@@ -1,0 +1,73 @@
+program: mec_hpc_investigations/models/sorscher_square_notebook.py
+project: mec-hpc-sorscher-squares
+method: grid
+metric:
+  goal: minimize
+  name: pc_loss
+parameters:
+  batch_size_train:
+    values: [
+      100,
+    ]
+  batch_size_val:
+    values: [
+      100,
+    ]
+  gradient_clipping:
+    values: [
+      0.00001,
+    ]
+  hidden_state_init:
+    values: [ 'pc_hd' ]
+  keep_prob:
+    values: [
+      0.5,
+      0.9,
+      0.9999,
+    ]
+  learning_rate:
+    values: [
+      0.01,
+    ]
+  n_epochs:
+    values: [
+      500,
+    ]
+  n_batches_per_epoch:
+    values: [
+      100,
+    ]
+  n_head_direction_cells:
+    values: [
+      12,
+    ]
+  n_hidden_units:
+    values: [
+      512,
+    ]
+  n_place_cells:
+    values: [
+      256,
+    ]
+  n_readout_units:
+    values: [
+      512,
+    ]
+  place_cell_rf:
+    values: [
+      0.05,
+    ]
+  sequence_length:
+    values: [
+      100,
+    ]
+  seed:
+    values: [ 0, 1, 2]
+  use_bias:
+    values: [
+      False
+    ]
+  weight_decay:
+      values: [
+        0.00001,
+      ]

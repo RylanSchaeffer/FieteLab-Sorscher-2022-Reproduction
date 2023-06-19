@@ -9,7 +9,8 @@ import wandb
 
 def plot_lattice_scores_by_nbins(lattice_scores_by_nbins_dict: Dict[int, Dict[str, np.ndarray]],
                                  wandb_logger=None,
-                                 plot_dir: str = None):
+                                 plot_dir: str = None,
+                                 wandb_key: str = None):
     plt.close()
     fig, axes = plt.subplots(nrows=1,
                              ncols=len(lattice_scores_by_nbins_dict))
@@ -34,7 +35,7 @@ def plot_lattice_scores_by_nbins(lattice_scores_by_nbins_dict: Dict[int, Dict[st
     # https://docs.wandb.ai/guides/track/log/plots#matplotlib-and-plotly-plots
     if wandb_logger is not None:
         wandb_logger.log_image(
-            key='lattice_scores_by_nbins',
+            key='lattice_scores_by_nbins' if wandb_key is None else wandb_key,
             images=[wandb.Image(fig)])
 
     # plt.show()
@@ -48,7 +49,8 @@ def plot_ratemaps_2d(ratemaps: np.ndarray,
                      n_cols: int = 10,
                      smooth_ratemap_before_plotting: bool = True,
                      plot_only_center: bool = True,
-                     plot_dir: str = None):
+                     plot_dir: str = None,
+                     wandb_key: str = None):
     plt.close()
 
     fig, axes = plt.subplots(
@@ -126,7 +128,7 @@ def plot_ratemaps_2d(ratemaps: np.ndarray,
         # https://docs.wandb.ai/guides/track/log/plots#matplotlib-and-plotly-plots
         fig = plt.gcf()
         wandb_logger.log_image(
-            key='ratemaps',
+            key='ratemaps' if wandb_key is None else wandb_key,
             images=[wandb.Image(fig)])
 
     plt.close()
