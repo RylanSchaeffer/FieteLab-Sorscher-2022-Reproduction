@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import DeviceStatsMonitor, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.profilers import PyTorchProfiler
+import shutil
 import torch
 import torch.nn
 import torch.nn.functional as F
@@ -56,7 +57,7 @@ lr_monitor_callback = LearningRateMonitor(
     log_momentum=True)
 
 checkpoint_callback = ModelCheckpoint(
-    monitor='losses_train/loss',
+    monitor='train/loss=total_loss',
     save_top_k=1,
     mode='min',
 )
@@ -134,3 +135,6 @@ if __name__ == '__main__':
         model=system,
         datamodule=trajectory_datamodule,
     )
+
+    # Delete the data after finished to save disk space.
+    shutil.rmtree(os.path.join(run_checkpoint_dir, 'data'))

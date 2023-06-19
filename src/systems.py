@@ -87,7 +87,7 @@ class GridCellSystem(pl.LightningModule):
                  on_epoch=False,
                  sync_dist=True)
 
-        return loss_results['loss']
+        return loss_results['total_loss']
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
@@ -198,11 +198,11 @@ class GridCellSystem(pl.LightningModule):
 
         pc_loss = torch.mean(ce_loss_fn(input=pc_logits, target=pc_or_pos_targets))
         hd_loss = torch.mean(ce_loss_fn(input=hd_logits, target=hd_targets))
-        loss = pc_loss + hd_loss
+        total_loss = pc_loss + hd_loss
         losses_results = {
             'pc_loss': pc_loss,
             'hd_loss': hd_loss,
-            'loss': loss,
+            'total_loss': total_loss,
         }
         return losses_results
 
