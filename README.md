@@ -37,3 +37,9 @@ An agent will continue to function until no more runs in the sweep remain. To cr
 A sensible way to parallelize is to launch multiple jobs on a cluster, where each job contains 1 agent.
 So for instance, if we're running on a SLURM cluster, each SLURM job should create 1 agent.
 Rylan has code for this.
+
+
+## TODOs
+
+- [x] Create hidden-state initialization using position, not place cells
+- [x] Reproduce the basic result

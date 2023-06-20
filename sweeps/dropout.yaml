@@ -1,5 +1,5 @@
-program: mec_hpc_investigations/models/sorscher_square_notebook.py
-project: mec-hpc-sorscher-squares
+program: train_one.py
+project: sorscher-2022-reproduction
 method: grid
 metric:
   goal: minimize
