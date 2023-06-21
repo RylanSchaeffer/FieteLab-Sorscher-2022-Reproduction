@@ -14,12 +14,16 @@ source ~/.bashrc
 module load openmind/cuda/11.2
 module load openmind/cudnn/11.5-v8.3.3.40
 
-# Activate virtual environment.
+# Activate conda environment.
 conda activate sorscher_reproduction
+
+cd /om2/user/rylansch/FieteLab-Sorscher-2022-Reproduction
+
+# Activate pip virtual environment.
+source sorscher_reproduction_venv/bin/activate
 
 export PYTHONPATH=.
 
-cd /om2/user/rylansch/FieteLab-Sorscher-2022-Reproduction
 
 if [[ $USER == "rylansch" ]]
 then

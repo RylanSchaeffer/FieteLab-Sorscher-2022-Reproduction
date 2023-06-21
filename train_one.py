@@ -25,6 +25,9 @@ torch.autograd.set_detect_anomaly(True)
 # for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
 torch.set_float32_matmul_precision('medium')
 
+print('CUDA available: ', torch.cuda.is_available())
+print('CUDA device count: ', torch.cuda.device_count())
+
 run = wandb.init(project='sorscher-2022-reproduction',
                  config=default_config)
 # Convert to a dictionary; otherwise, can't distribute because W&B

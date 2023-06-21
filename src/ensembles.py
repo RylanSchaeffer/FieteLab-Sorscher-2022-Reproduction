@@ -104,8 +104,12 @@ class PlaceCellEnsemble(CellEnsemble, pl.LightningModule):
             soft_targets=soft_targets,
             soft_init=soft_init)
         # Create a random MoG with fixed cov over the position (Nx2)
-        self.means = (pos_max - pos_min) * torch.rand(size=(self.n_cells, 2), device=self.device) + pos_min
-        self.variances = torch.ones((self.n_cells, 2), device=self.device) * stdev ** 2
+        self.means = torch.nn.Parameter(
+            (pos_max - pos_min) * torch.rand(size=(self.n_cells, 2), device=self.device) + pos_min,
+            requires_grad=False)
+        self.variances = torch.nn.Parameter(
+            torch.ones((self.n_cells, 2), device=self.device) * stdev ** 2,
+            requires_grad=False)
 
     def unnor_logpdf(self,
                      positions: torch.Tensor,
@@ -128,10 +132,12 @@ class HeadDirectionCellEnsemble(CellEnsemble, pl.LightningModule):
             n_cells=n_cells,
             soft_targets=soft_targets,
             soft_init=soft_init)
-        # Create a random Von Mises with fixed cov over the position
-        # rs = np.random.RandomState(seed)
-        self.means = 2. * np.pi * torch.rand(n_cells, device=self.device) - np.pi
-        self.kappa = torch.ones(n_cells, device=self.device) * concentration
+        # Create a random Von Mises with fixed precision over the angles.
+        # Need to make these parameters so they're moved onto the GPU by Lightning!
+        self.means = torch.nn.Parameter(2. * np.pi * torch.rand(n_cells) - np.pi,
+                                        requires_grad=False)
+        self.kappa = torch.nn.Parameter(concentration * torch.ones(n_cells),
+                                        requires_grad=False)
 
     def unnor_logpdf(self,
                      x: torch.Tensor,
