@@ -77,7 +77,7 @@ class GridCellSystem(pl.LightningModule):
                      sync_dist=True)
 
         pos_decoding_err = self.compute_pos_decoding_err(
-            activations=forward_results['g_activations'],
+            activations=forward_results['pc_logits'],
             target_pos=batch['target_pos'],
         )
 
@@ -116,7 +116,7 @@ class GridCellSystem(pl.LightningModule):
                      sync_dist=True)
 
         pos_decoding_err = self.compute_pos_decoding_err(
-            activations=forward_results['g_activations'],
+            activations=forward_results['pc_logits'],
             target_pos=batch['target_pos'],
         )
 
@@ -212,20 +212,20 @@ class GridCellSystem(pl.LightningModule):
     def compute_pos_decoding_err(self,
                                  activations: torch.Tensor,
                                  target_pos: torch.Tensor,
+                                 num_top_pcs: int = 3,
                                  ) -> torch.Tensor:
 
-        _, top_k_indices = torch.topk(activations, k=3)
+        _, top_k_indices = torch.topk(activations, k=num_top_pcs, dim=2)
 
         # Make sure top_k_indices is of type long, as it's required for indexing
         top_k_indices = top_k_indices.long()
 
-        # Reshape the tensor (in PyTorch you can use view instead of reshape)
-        reshaped_means = self.pc_ensemble.means.view(-1, 2)
-
         # Gathering using advanced indexing
-        gathered_means = reshaped_means[top_k_indices]
+        # Shape: (batch size, sequence length, num_top_pcs, spatial coordinates = 2)
+        gathered_means = self.pc_ensemble.means[top_k_indices]
 
-        # Compute the mean across the second-to-last dimension (-2)
+        # Average across the top three PCs.
+        # Shape: (batch size, sequence length, 2)
         pred_pos = torch.mean(gathered_means, dim=-2)
         pos_decoding_err = torch.mean(torch.linalg.norm(pred_pos - target_pos, dim=2))
 
