@@ -35,8 +35,7 @@ run = wandb.init(project='sorscher-2022-reproduction',
 wandb_config = dict(wandb.config)
 
 # Convert "None" (type: str) to None (type: NoneType)
-for key in ['accumulate_grad_batches', 'auto_scale_batch_size', 'gradient_clip_val',
-            'learning_rate_scheduler']:
+for key in ['accumulate_grad_batches', 'gradient_clip_val', 'learning_rate_scheduler']:
     if isinstance(wandb_config[key], str):
         if wandb_config[key] == "None":
             wandb_config[key] = None
@@ -92,9 +91,6 @@ trajectory_datamodule = TrajectoryDataModule(
 trainer = pl.Trainer(
     accelerator=accelerator,
     accumulate_grad_batches=wandb_config['accumulate_grad_batches'],
-    auto_lr_find=wandb_config['auto_lr_find'],
-    auto_scale_batch_size=False,
-    # auto_scale_batch_size=wandb_config['auto_scale_batch_size'],
     callbacks=callbacks,
     check_val_every_n_epoch=1,  # default
     default_root_dir=run_checkpoint_dir,
@@ -110,7 +106,7 @@ trainer = pl.Trainer(
     # profiler="advanced",  # More advanced profiler
     # profiler=PyTorchProfiler(filename=),  # PyTorch specific profiler
     precision=wandb_config['precision'],
-    track_grad_norm=2,
+    # track_grad_norm=2,
 )
 
 # .fit() needs to be called below for multiprocessing.
@@ -118,17 +114,6 @@ trainer = pl.Trainer(
 # See: https://github.com/Lightning-AI/lightning/discussions/9201
 # See: https://github.com/Lightning-AI/lightning/discussions/151
 if __name__ == '__main__':
-
-    # If we want to autoscale learning rate or batch size, we need to call .tune() first.
-    if wandb_config['auto_lr_find'] or wandb_config['auto_scale_batch_size'] is not None:
-        # trainer.tune(
-        #     model=system,
-        #     datamodule=trajectory_datamodule,
-        #     scale_batch_size_kwargs={'max_trials': 25}  # default is 25
-        # )
-        print('Reminder: tuning learning rate or batch size is not yet implemented.')
-    else:
-        print('Not tuning learning rate or batch size.')
 
     pp = pprint.PrettyPrinter(indent=4)
     print('W&B Config:')

@@ -126,9 +126,9 @@ class GridCellSystem(pl.LightningModule):
                  on_epoch=True,
                  sync_dist=True)
 
-        positions_numpy = batch['target_pos'].detach().numpy()
-        lstm_activations_numpy = forward_results['lstm_activations'].detach().numpy()
-        g_activations_numpy = forward_results['g_activations'].detach().numpy()
+        positions_numpy = batch['target_pos'].cpu().detach().numpy()
+        lstm_activations_numpy = forward_results['lstm_activations'].cpu().detach().numpy()
+        g_activations_numpy = forward_results['g_activations'].cpu().detach().numpy()
 
         for activations_array, activation_str in [(lstm_activations_numpy, 'lstm'), (g_activations_numpy, 'g')]:
 
@@ -393,13 +393,17 @@ class SorscherRecurrentNetwork(pl.LightningModule):
             raise ValueError
         added_init_activations = init_pc_or_pos_activations + init_hd_activations
 
-        lstm_activations, (lstm_h_n, lstm_c_n) = self.recurrent_layer(
+        # We need to swap batch & time dimension ourselves.
+        # We also need to make the tensors contiguous because otherwise get error: rnn: hx is not contiguous
+        # https://discuss.pytorch.org/t/runtimeerror-input-is-not-contiguous/930/6
+        initial_state = (
+            added_init_activations[:, :, :self.wandb_config['n_hidden_units']].transpose(0, 1).contiguous(),
+            added_init_activations[:, :, self.wandb_config['n_hidden_units']:].transpose(0, 1).contiguous(),
+        )
+
+        lstm_activations, _ = self.recurrent_layer(
             recurrent_inputs,
-            (added_init_activations[:, :, :self.wandb_config['n_hidden_units']].transpose(0, 1),
-             # We need to swap batch & time dimension ourselves.
-             added_init_activations[:, :, self.wandb_config['n_hidden_units']:].transpose(0, 1),
-             # We need to swap batch & time dimension ourselves.
-             )
+            initial_state
         )
         g_activations = self.readout_one_layer(lstm_activations)
         output_activations = self.readout_two_layer(self.dropout_layer(g_activations))

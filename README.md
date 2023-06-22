@@ -10,6 +10,10 @@ To activate the environment:
 
 `conda activate sorscher_reproduction`
 
+Upgrade pip:
+
+`pip install --upgrade pip`
+
 Then install wandb with pip, recommended by W&B [here](https://docs.wandb.ai/guides/technical-faq/setup).
 
 `pip install wandb`
@@ -21,6 +25,13 @@ Then install the correct version of Pytorch:
 I also needed to install an additional system component via conda:
 
 `conda install libgcc`
+
+
+
+
+`pip3 install torch torchvision torchaudio`
+
+
 
 ## Creating a Sweep
 

@@ -5,8 +5,6 @@ dependencies:
   - matplotlib
   - numpy
   - pandas
-  - pytorch
-  - pytorch-lightning
   - scipy
   - seaborn
   - scikit-image
