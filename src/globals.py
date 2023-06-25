@@ -27,7 +27,7 @@ default_config = {
     'rnn_type': 'lstm',
     'seed': 0,
     'sequence_length': 31,
+    'shuffle_train': True,
     'use_bias': False,
     'weight_decay': 1e-5,
-    # 'weight_decay': 0.0,
 }

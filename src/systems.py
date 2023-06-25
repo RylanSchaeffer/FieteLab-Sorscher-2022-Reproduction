@@ -1,5 +1,6 @@
 import numpy as np
-import pytorch_lightning as pl
+import lightning.pytorch as pl
+from lightning.pytorch.utilities import grad_norm
 import torch
 import torch.nn
 import torch.nn.functional
@@ -93,10 +94,8 @@ class GridCellSystem(pl.LightningModule):
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int):
 
-        return
-
         init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(batch=batch)
-        forward_results = self.recurrent_network(
+        forward_results = self.recurrent_network.forward(
             init_hd_values=init_hd_values,
             init_pc_or_pos_values=init_pc_or_pos_values,
             recurrent_inputs=recurrent_inputs,
@@ -151,7 +150,7 @@ class GridCellSystem(pl.LightningModule):
                 right=extreme_coords['right'],
                 top=extreme_coords['top'],
                 bottom=extreme_coords['bottom'],
-                nbins_list=[ratemaps_2d.shape[1]],  # we're hijacking the previous DeepMind code.
+                nbins_list=[ratemaps_2d.shape[1]],  # we're hijacking DeepMind's code.
             )
 
             lattice_scores_by_nbins_dict = compute_lattice_scores_from_ratemaps_2d(
@@ -235,7 +234,9 @@ class GridCellSystem(pl.LightningModule):
         # Average across the top three PCs.
         # Shape: (batch size, sequence length, 2)
         pred_pos = torch.mean(gathered_means, dim=-2)
-        pos_decoding_err = torch.mean(torch.linalg.norm(pred_pos - target_pos, dim=2))
+
+        # Multiplying by 100 converts from meters to centimeters.
+        pos_decoding_err = 100 * torch.mean(torch.linalg.norm(pred_pos - target_pos, dim=2))
 
         return pos_decoding_err
 
@@ -328,6 +329,12 @@ class GridCellSystem(pl.LightningModule):
             raise NotImplementedError(f"{self.wandb_config['learning_rate_scheduler']}")
 
         return optimizer_and_maybe_others_dict
+
+    def on_before_optimizer_step(self, optimizer):
+        # Compute the 2-norm for each layer
+        # If using mixed precision, the gradients are already unscaled here
+        norms = grad_norm(self.layer, norm_type=2)
+        self.log_dict(norms)
 
 
 class SorscherRecurrentNetwork(pl.LightningModule):

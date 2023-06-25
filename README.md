@@ -20,7 +20,7 @@ Then install wandb with pip, recommended by W&B [here](https://docs.wandb.ai/gui
 
 Then install pytorch lightning:
 
-`pip install pytorch-lightning`
+`pip install lightning`
 
 Then install the correct version of Pytorch:
 
@@ -62,7 +62,9 @@ So for instance, if we're running on a SLURM cluster, each SLURM job should crea
 Rylan has code for this.
 
 
+
 ## TODOs
 
-- [x] Create hidden-state initialization using position, not place cells
-- [x] Reproduce the basic result
+- [ ] Confirm that losses are approximately correct (PC at init: ~5.5, HD at init: ~, Pos Decoding Error: ~100)
+- [ ] Reproduce the basic result
+- [ ] Create hidden-state initialization using position, not place cells

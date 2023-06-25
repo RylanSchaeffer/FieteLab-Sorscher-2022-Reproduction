@@ -13,7 +13,7 @@ parameters:
     values: [
       100,
     ]
-  gradient_clipping:
+  gradient_clip_val:
     values: [
       0.00001,
     ]

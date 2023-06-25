@@ -2,10 +2,10 @@ import numpy as np
 import json
 import os
 import pprint
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import DeviceStatsMonitor, LearningRateMonitor, ModelCheckpoint
-from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.profilers import PyTorchProfiler
+import lightning.pytorch as pl
+from lightning.pytorch.callbacks import DeviceStatsMonitor, LearningRateMonitor, ModelCheckpoint
+from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.profilers import PyTorchProfiler
 import shutil
 import torch
 import torch.nn
@@ -97,6 +97,8 @@ trainer = pl.Trainer(
     default_root_dir=run_checkpoint_dir,
     deterministic=True,
     devices='auto',
+    fast_dev_run=True,
+    # fast_dev_run=False,
     logger=wandb_logger,  # min_epochs=50,
     log_every_n_steps=5,
     # overfit_batches=1,  # useful for debugging
