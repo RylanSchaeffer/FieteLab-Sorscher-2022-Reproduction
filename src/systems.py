@@ -55,8 +55,20 @@ class GridCellSystem(pl.LightningModule):
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int):
 
-        assert batch['target_pos'].min() >= (-self.wandb_config['box_width_in_m'] / 2.)
-        assert batch['target_pos'].max() <= (self.wandb_config['box_width_in_m'] / 2.)
+        self.log(f'train/target_pos_min',
+                 batch['target_pos'].min(),
+                 on_step=True,
+                 on_epoch=False,
+                 sync_dist=True)
+
+        self.log(f'train/target_pos_max',
+                 batch['target_pos'].max(),
+                 on_step=True,
+                 on_epoch=False,
+                 sync_dist=True)
+
+        # assert  >= (-self.wandb_config['box_width_in_m'] / 2.)
+        # assert batch['target_pos'].max() <= (self.wandb_config['box_width_in_m'] / 2.)
 
         init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(batch=batch)
         forward_results = self.recurrent_network.forward(
@@ -103,6 +115,8 @@ class GridCellSystem(pl.LightningModule):
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int):
+
+        return
 
         init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(batch=batch)
         forward_results = self.recurrent_network.forward(
@@ -357,11 +371,11 @@ class GridCellSystem(pl.LightningModule):
 
         return optimizer_and_maybe_others_dict
 
-    def on_before_optimizer_step(self, optimizer):
-        # Compute the 2-norm for each layer
-        # If using mixed precision, the gradients are already unscaled here
-        norms = grad_norm(self.layer, norm_type=2)
-        self.log_dict(norms)
+    # def on_before_optimizer_step(self, optimizer):
+    #     # Compute the 2-norm for each layer
+    #     # If using mixed precision, the gradients are already unscaled here
+    #     norms = grad_norm(self.layer, norm_type=2)
+    #     self.log_dict(norms)
 
 
 class SorscherRecurrentNetwork(pl.LightningModule):
