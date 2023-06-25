@@ -34,9 +34,9 @@ class TrajectoryDataset(Dataset):
             for i in range(self.length):
                 generated_data = generate_trajectory(
                     batch_size=1,
-                    sequence_length=self.wandb_config['sequence_length'],
+                    sequence_length=self.wandb_config[f'sequence_length_{self.split}'],
                     dt=self.wandb_config['dt'],
-                    box_size=self.wandb_config['box_width_in_m'],
+                    box_size=self.wandb_config['box_width_in_m'] / 2.,
                 )
                 # Remove the batch dimension.
                 generated_data = {k: v[0] for k, v in generated_data.items()}
@@ -62,9 +62,9 @@ class TrajectoryDataset(Dataset):
             # Sample the data now.
             generated_data = generate_trajectory(
                 batch_size=1,
-                sequence_length=self.wandb_config['sequence_length'],
+                sequence_length=self.wandb_config[f'sequence_length_{self.split}'],
                 dt=self.wandb_config['dt'],
-                box_size=self.wandb_config['box_width_in_m'],
+                box_size=self.wandb_config['box_width_in_m'] / 2.,
             )
             item = {k: v[0].astype(np.float32) for k, v in generated_data.items()}
 
@@ -163,7 +163,7 @@ def generate_trajectory(batch_size: int,
     # initialize variables
     position = np.zeros((batch_size, sequence_length + 1, 2), dtype=float)
     head_dir = np.zeros((batch_size, sequence_length + 1), dtype=float)
-    turning = np.zeros((batch_size, sequence_length + 1), dtype='bool')
+    turning = np.zeros((batch_size, sequence_length + 1), dtype=bool)
     ego_speed = np.zeros((batch_size, sequence_length + 1), dtype=float)
 
     for batch_idx in range(batch_size):
@@ -172,14 +172,14 @@ def generate_trajectory(batch_size: int,
         head_dir[batch_idx, 0] = np.random.uniform(0, 2 * np.pi)
 
         # generate sequence of random boosts and turns
-        random_turn = np.random.normal(mu, sigma, sequence_length + 1)
-        random_vel = np.random.rayleigh(b, sequence_length + 1)
+        random_turn = np.random.normal(loc=mu, scale=sigma, size=sequence_length + 1)
+        random_vel = np.random.rayleigh(scale=b, size=sequence_length + 1)
 
         v = np.random.rayleigh(b)
         for i in range(1, sequence_length + 1):
             # If in border region, turn and slow down
             d_wall, a_wall = min_dist_angle(position[batch_idx, i - 1], head_dir[batch_idx, i - 1] % (2 * np.pi),
-                                            box_size)
+                                            box_size=box_size)
             if d_wall < border_region and np.abs(a_wall) < np.pi / 2:
                 turning[batch_idx, i - 1] = 1
                 turn_angle = np.sign(a_wall) * (np.pi / 2 - np.abs(a_wall)) + dt * random_turn[i]
@@ -197,7 +197,7 @@ def generate_trajectory(batch_size: int,
 
     ang_velocity = np.diff(head_dir, axis=1)
     theta_x, theta_y = np.cos(ang_velocity), np.sin(ang_velocity)
-    head_dir = (head_dir + np.pi) % (2 * np.pi) - np.pi  # Constrain head_dir to interval (-pi, pi)
+    head_dir = (head_dir + np.pi) % (2. * np.pi) - np.pi  # Constrain head_dir to interval (-pi, pi)
 
     # All arrays have shape (batch size = 1, appropriate temporal length, dim of variable)
     generated_data = {

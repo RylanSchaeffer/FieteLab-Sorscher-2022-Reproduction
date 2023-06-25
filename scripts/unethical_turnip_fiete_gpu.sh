@@ -9,12 +9,11 @@
 
 id=${1}
 
+source ~/.bashrc
+
 # write the executed command to the slurm output file for easy reproduction
 # https://stackoverflow.com/questions/5750450/how-can-i-print-each-command-before-executing
 set -x
-
-
-source ~/.bashrc
 
 module load openmind/cuda/11.7
 module load openmind/cudnn/11.5-v8.3.3.40

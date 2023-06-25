@@ -7,11 +7,11 @@
 
 id=${1}
 
+source ~/.bashrc
+
 # write the executed command to the slurm output file for easy reproduction
 # https://stackoverflow.com/questions/5750450/how-can-i-print-each-command-before-executing
 set -x
-
-source ~/.bashrc
 
 # Activate conda environment.
 conda activate sorscher_reproduction

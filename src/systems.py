@@ -55,6 +55,9 @@ class GridCellSystem(pl.LightningModule):
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int):
 
+        assert batch['target_pos'].min() >= (-self.wandb_config['box_width_in_m'] / 2.)
+        assert batch['target_pos'].max() <= (self.wandb_config['box_width_in_m'] / 2.)
+
         init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(batch=batch)
         forward_results = self.recurrent_network.forward(
             init_hd_values=init_hd_values,
@@ -77,13 +80,20 @@ class GridCellSystem(pl.LightningModule):
                      on_epoch=False,
                      sync_dist=True)
 
-        pos_decoding_err = self.compute_pos_decoding_err(
-            activations=forward_results['pc_logits'],
+        pos_decoding_err, pc_acc = self.compute_pos_decoding_err_and_acc(
+            pc_logits=forward_results['pc_logits'],
+            pc_or_pos_targets=pc_or_pos_targets,
             target_pos=batch['target_pos'],
         )
 
         self.log(f'train/pos_decoding_err',
                  pos_decoding_err,
+                 on_step=True,
+                 on_epoch=False,
+                 sync_dist=True)
+
+        self.log(f'train/pc_acc',
+                 pc_acc,
                  on_step=True,
                  on_epoch=False,
                  sync_dist=True)
@@ -116,13 +126,19 @@ class GridCellSystem(pl.LightningModule):
                      on_epoch=True,
                      sync_dist=True)
 
-        pos_decoding_err = self.compute_pos_decoding_err(
-            activations=forward_results['pc_logits'],
+        pos_decoding_err, pc_acc = self.compute_pos_decoding_err_and_acc(
+            pc_logits=forward_results['pc_logits'],
             target_pos=batch['target_pos'],
         )
 
         self.log(f'val/pos_decoding_err',
                  pos_decoding_err,
+                 on_step=False,
+                 on_epoch=True,
+                 sync_dist=True)
+
+        self.log(f'val/pc_acc',
+                 pc_acc,
                  on_step=False,
                  on_epoch=True,
                  sync_dist=True)
@@ -181,12 +197,16 @@ class GridCellSystem(pl.LightningModule):
 
         # Create initial conditions.
         with torch.no_grad():
+            # Shape: (batch size, 1, n_hd_cells)
             init_hd_values = self.hd_ensemble.get_init(batch['init_hd'])
             if self.wandb_config['hidden_state_init'] == 'pc_hd':
+                # Shape: (batch size, 1, n_pc_cells)
                 init_pc_or_pos_values = self.pc_ensemble.get_init(batch['init_pos'])
             else:
+                # Shape: (batch size, 1, 2)
                 init_pc_or_pos_values = batch['init_pos']
 
+            # Shape: (batch size, 1, 3)
             recurrent_inputs = torch.concat(
                 (batch['ego_speed'], batch['theta_x'], batch['theta_y']),
                 dim=2)
@@ -200,7 +220,7 @@ class GridCellSystem(pl.LightningModule):
                        hd_logits: torch.Tensor,
                        ) -> Dict[str, torch.Tensor]:
 
-        # Torch frustratingly requires the classes to be in the 1st dimension.
+        # Torch cross entropy frustratingly requires the classes to be in the 1st dimension.
         pc_loss = torch.mean(ce_loss_fn(
             input=pc_logits.transpose(1, 2).contiguous(),
             target=torch.argmax(pc_or_pos_targets, dim=2)
@@ -216,16 +236,17 @@ class GridCellSystem(pl.LightningModule):
         }
         return losses_results
 
-    def compute_pos_decoding_err(self,
-                                 activations: torch.Tensor,
-                                 target_pos: torch.Tensor,
-                                 num_top_pcs: int = 3,
-                                 ) -> torch.Tensor:
+    def compute_pos_decoding_err_and_acc(self,
+                                         pc_logits: torch.Tensor,
+                                         pc_or_pos_targets: torch.Tensor,
+                                         target_pos: torch.Tensor,
+                                         num_top_pcs: int = 3,
+                                         ) -> Tuple[torch.Tensor, torch.Tensor]:
 
-        _, top_k_indices = torch.topk(activations, k=num_top_pcs, dim=2)
+        _, top_k_indices = torch.topk(pc_logits, k=num_top_pcs, dim=2)
 
         # Make sure top_k_indices is of type long, as it's required for indexing
-        top_k_indices = top_k_indices.long()
+        # top_k_indices = top_k_indices.long()
 
         # Gathering using advanced indexing
         # Shape: (batch size, sequence length, num_top_pcs, spatial coordinates = 2)
@@ -233,12 +254,17 @@ class GridCellSystem(pl.LightningModule):
 
         # Average across the top three PCs.
         # Shape: (batch size, sequence length, 2)
-        pred_pos = torch.mean(gathered_means, dim=-2)
+        pred_pos = torch.mean(gathered_means, dim=2)
 
         # Multiplying by 100 converts from meters to centimeters.
-        pos_decoding_err = 100 * torch.mean(torch.linalg.norm(pred_pos - target_pos, dim=2))
+        pos_decoding_err = 100. * torch.mean(torch.linalg.norm(pred_pos - target_pos, dim=2))
 
-        return pos_decoding_err
+        pc_acc = torch.mean(
+            torch.eq(torch.argmax(pc_logits, dim=2),
+                     torch.argmax(pc_or_pos_targets, dim=2)).float()
+        )
+
+        return pos_decoding_err, pc_acc
 
     def compute_targets(self,
                         batch: Dict[str, torch.Tensor]):
@@ -400,12 +426,7 @@ class SorscherRecurrentNetwork(pl.LightningModule):
 
         # Compute initial LSTM hidden state values.
         init_hd_activations = self.hd_init_layer(init_hd_values)
-        if self.wandb_config['hidden_state_init'] == 'pc_hd':
-            init_pc_or_pos_activations = self.pc_or_pos_init_layer(init_pc_or_pos_values)
-        elif self.wandb_config['hidden_state_init'] == 'pos_hd':
-            init_pc_or_pos_activations = self.pc_or_pos_init_layer(init_pc_or_pos_values)
-        else:
-            raise ValueError
+        init_pc_or_pos_activations = self.pc_or_pos_init_layer(init_pc_or_pos_values)
         added_init_activations = init_pc_or_pos_activations + init_hd_activations
 
         # We need to swap batch & time dimension ourselves.

@@ -97,8 +97,8 @@ trainer = pl.Trainer(
     default_root_dir=run_checkpoint_dir,
     deterministic=True,
     devices='auto',
-    fast_dev_run=True,
-    # fast_dev_run=False,
+    # fast_dev_run=True,
+    fast_dev_run=False,
     logger=wandb_logger,  # min_epochs=50,
     log_every_n_steps=5,
     # overfit_batches=1,  # useful for debugging
