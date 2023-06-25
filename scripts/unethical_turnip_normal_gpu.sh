@@ -15,7 +15,7 @@ source ~/.bashrc
 set -x
 
 module load openmind/cuda/11.7
-module load openmind/cudnn/11.5-v8.3.3.40
+#module load openmind/cudnn/11.5-v8.3.3.40
 
 # Activate conda environment.
  conda activate sorscher_reproduction

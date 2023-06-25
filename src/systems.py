@@ -128,6 +128,7 @@ class GridCellSystem(pl.LightningModule):
 
         pos_decoding_err, pc_acc = self.compute_pos_decoding_err_and_acc(
             pc_logits=forward_results['pc_logits'],
+            pc_or_pos_targets=pc_or_pos_targets,
             target_pos=batch['target_pos'],
         )
 
