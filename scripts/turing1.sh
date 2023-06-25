@@ -29,4 +29,6 @@ fi
 set -x
 
 # https://docs.wandb.ai/guides/sweeps/parallelize-agents#parallelize-on-a-multi-gpu-machine
-CUDA_VISIBLE_DEVICES=${gpu_id} wandb agent ${user}/sorscher-2022-reproduction/${id}
+export CUDA_DEVICE_ORDER="PCI_BUS_ID"
+export CUDA_VISIBLE_DEVICES=${gpu_id}
+wandb agent ${user}/sorscher-2022-reproduction/${id}

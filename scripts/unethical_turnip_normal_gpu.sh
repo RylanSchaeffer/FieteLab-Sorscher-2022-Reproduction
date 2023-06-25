@@ -3,14 +3,18 @@
 #SBATCH --mem=20G               # RAM
 #SBATCH --gres=gpu:1
 #SBATCH --constraint=16GB
-#SBATCH --time=12:00:00         # total run time limit (D-HH:MM:SS)
+#SBATCH --time=24:00:00         # total run time limit (D-HH:MM:SS)
 #SBATCH --mail-type=FAIL
 
 id=${1}
 
+# write the executed command to the slurm output file for easy reproduction
+# https://stackoverflow.com/questions/5750450/how-can-i-print-each-command-before-executing
+set -x
+
 source ~/.bashrc
 
-module load openmind/cuda/11.2
+module load openmind/cuda/11.7
 module load openmind/cudnn/11.5-v8.3.3.40
 
 # Activate conda environment.
@@ -32,8 +36,6 @@ then
   user="mikailkhona"
 fi
 
-# write the executed command to the slurm output file for easy reproduction
-# https://stackoverflow.com/questions/5750450/how-can-i-print-each-command-before-executing
-set -x
+which python
 
 wandb agent ${user}/sorscher-2022-reproduction/${id}

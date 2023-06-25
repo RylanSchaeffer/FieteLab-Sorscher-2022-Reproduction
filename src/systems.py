@@ -55,7 +55,7 @@ class GridCellSystem(pl.LightningModule):
                       batch_idx: int):
 
         init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(batch=batch)
-        forward_results = self.recurrent_network(
+        forward_results = self.recurrent_network.forward(
             init_hd_values=init_hd_values,
             init_pc_or_pos_values=init_pc_or_pos_values,
             recurrent_inputs=recurrent_inputs,
@@ -92,6 +92,8 @@ class GridCellSystem(pl.LightningModule):
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int):
+
+        return
 
         init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(batch=batch)
         forward_results = self.recurrent_network(
@@ -199,8 +201,14 @@ class GridCellSystem(pl.LightningModule):
                        hd_logits: torch.Tensor,
                        ) -> Dict[str, torch.Tensor]:
 
-        pc_loss = torch.mean(ce_loss_fn(input=pc_logits, target=pc_or_pos_targets))
-        hd_loss = torch.mean(ce_loss_fn(input=hd_logits, target=hd_targets))
+        # Torch frustratingly requires the classes to be in the 1st dimension.
+        pc_loss = torch.mean(ce_loss_fn(
+            input=pc_logits.transpose(1, 2).contiguous(),
+            target=torch.argmax(pc_or_pos_targets, dim=2)
+        ))
+        hd_loss = torch.mean(ce_loss_fn(
+            input=hd_logits.transpose(1, 2).contiguous(),
+            target=torch.argmax(hd_targets, dim=2)))
         total_loss = pc_loss + hd_loss
         losses_results = {
             'pc_loss': pc_loss,

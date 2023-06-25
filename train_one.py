@@ -23,10 +23,10 @@ torch.autograd.set_detect_anomaly(True)
 # You are using a CUDA device ('A100 80GB PCIe') that has Tensor Cores. To properly utilize them, you
 # should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision
 # for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
-torch.set_float32_matmul_precision('medium')
+# torch.set_float32_matmul_precision('medium')
 
-print('CUDA available: ', torch.cuda.is_available())
-print('CUDA device count: ', torch.cuda.device_count())
+# print('CUDA available: ', torch.cuda.is_available())
+# print('CUDA device count: ', torch.cuda.device_count())
 
 run = wandb.init(project='sorscher-2022-reproduction',
                  config=default_config)
@@ -68,36 +68,37 @@ callbacks = [
     lr_monitor_callback,
     checkpoint_callback,
 ]
-if torch.cuda.is_available():
-    accelerator = 'gpu'
-    devices = torch.cuda.device_count()
-    callbacks.extend([
-        # DeviceStatsMonitor()
-    ])
-    print('GPU available.')
-else:
-    accelerator = None
-    devices = None
-    callbacks.extend([])
-    print('No GPU available.')
+# if torch.cuda.is_available():
+#     accelerator = 'cuda'
+#     devices = torch.cuda.device_count()
+#     callbacks.extend([
+#         # DeviceStatsMonitor()
+#     ])
+#     print('GPU available.')
+# else:
+#     accelerator = 'auto'
+#     devices = None
+#     callbacks.extend([])
+#     print('No GPU available.')
 
 trajectory_datamodule = TrajectoryDataModule(
     wandb_config=wandb_config,
     run_checkpoint_dir=run_checkpoint_dir,
     torch_generator=torch_generator,
 )
+print('Created Trajectory Datamodule.')
 
 # https://pytorch-lightning.readthedocs.io/en/latest/api/pytorch_lightning.trainer.trainer.Trainer.html
 trainer = pl.Trainer(
-    accelerator=accelerator,
+    accelerator='auto',
     accumulate_grad_batches=wandb_config['accumulate_grad_batches'],
     callbacks=callbacks,
-    check_val_every_n_epoch=1,  # default
+    check_val_every_n_epoch=25,
     default_root_dir=run_checkpoint_dir,
     deterministic=True,
-    devices=devices,
+    devices='auto',
     logger=wandb_logger,  # min_epochs=50,
-    log_every_n_steps=50,
+    log_every_n_steps=5,
     # overfit_batches=1,  # useful for debugging
     gradient_clip_val=wandb_config['gradient_clip_val'],
     # gradient_clip_val=None,  # default
@@ -124,5 +125,5 @@ if __name__ == '__main__':
         datamodule=trajectory_datamodule,
     )
 
-    # Delete the data after finished to save disk space.
+    # Delete the data after training finished, to save disk space.
     shutil.rmtree(os.path.join(run_checkpoint_dir, 'data'))

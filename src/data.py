@@ -89,8 +89,8 @@ class TrajectoryDataModule(pl.LightningDataModule):
 
         # Recommendation: https://pytorch-lightning.readthedocs.io/en/latest/guides/speed.html
         if num_workers is None:
-            num_workers = max(4, os.cpu_count() // 4)  # heuristic
-            # num_workers = 1
+            # num_workers = max(4, os.cpu_count() // 4)  # heuristic
+            num_workers = 1
         self.num_workers = num_workers
         self.train_dataset = None
         self.val_dataset = None
@@ -116,7 +116,7 @@ class TrajectoryDataModule(pl.LightningDataModule):
         return DataLoader(
             self.train_dataset,
             batch_size=self.wandb_config['batch_size_train'],
-            shuffle=True,
+            shuffle=self.wandb_config['shuffle_train'],
             num_workers=self.num_workers,
             drop_last=True,
             pin_memory=self.pin_memory,

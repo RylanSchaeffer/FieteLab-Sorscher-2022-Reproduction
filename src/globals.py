@@ -1,5 +1,5 @@
 default_config = {
-    'accumulate_grad_batches': 'None',
+    'accumulate_grad_batches': 1,
     'batch_size_train': 17,
     'batch_size_val': 13,
     'bin_side_in_m': 0.05,

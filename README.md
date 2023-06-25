@@ -18,6 +18,10 @@ Then install wandb with pip, recommended by W&B [here](https://docs.wandb.ai/gui
 
 `pip install wandb`
 
+Then install pytorch lightning:
+
+`pip install pytorch-lightning`
+
 Then install the correct version of Pytorch:
 
 `pip install torch==1.12.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html`
