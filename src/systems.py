@@ -70,7 +70,8 @@ class GridCellSystem(pl.LightningModule):
         # assert  >= (-self.wandb_config['box_width_in_m'] / 2.)
         # assert batch['target_pos'].max() <= (self.wandb_config['box_width_in_m'] / 2.)
 
-        init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(batch=batch)
+        init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(
+            batch=batch)
         forward_results = self.recurrent_network.forward(
             init_hd_values=init_hd_values,
             init_pc_or_pos_values=init_pc_or_pos_values,
@@ -92,14 +93,16 @@ class GridCellSystem(pl.LightningModule):
                      on_epoch=False,
                      sync_dist=True)
 
-        pos_decoding_err, pc_acc = self.compute_pos_decoding_err_and_acc(
+        pos_decoding_err, pc_acc, hd_acc = self.compute_pos_decoding_err_and_acc(
             pc_logits=forward_results['pc_logits'],
             pc_or_pos_targets=pc_or_pos_targets,
             target_pos=batch['target_pos'],
+            hd_logits=forward_results['hd_logits'],
+            hd_targets=hd_targets,
         )
 
-        self.log(f'train/pos_decoding_err',
-                 pos_decoding_err,
+        self.log(f'train/pos_decoding_err_in_cm',
+                 100 * pos_decoding_err,  # Multiplying by 100 converts from meters to centimeters.
                  on_step=True,
                  on_epoch=False,
                  sync_dist=True)
@@ -109,6 +112,13 @@ class GridCellSystem(pl.LightningModule):
                  on_step=True,
                  on_epoch=False,
                  sync_dist=True)
+
+        self.log(f'train/pc_acc',
+                 hd_acc,
+                 on_step=True,
+                 on_epoch=False,
+                 sync_dist=True)
+
 
         return loss_results['total_loss']
 
@@ -140,19 +150,27 @@ class GridCellSystem(pl.LightningModule):
                      on_epoch=True,
                      sync_dist=True)
 
-        pos_decoding_err, pc_acc = self.compute_pos_decoding_err_and_acc(
+        pos_decoding_err, pc_acc, hd_acc = self.compute_pos_decoding_err_and_acc(
             pc_logits=forward_results['pc_logits'],
             pc_or_pos_targets=pc_or_pos_targets,
             target_pos=batch['target_pos'],
+            hd_logits=forward_results['hd_logits'],
+            hd_targets=hd_targets,
         )
 
-        self.log(f'val/pos_decoding_err',
-                 pos_decoding_err,
+        self.log(f'val/pos_decoding_err_in_cm',
+                 100 * pos_decoding_err,  # Multiplying by 100 converts from meters to centimeters.
                  on_step=False,
                  on_epoch=True,
                  sync_dist=True)
 
         self.log(f'val/pc_acc',
+                 pc_acc,
+                 on_step=False,
+                 on_epoch=True,
+                 sync_dist=True)
+
+        self.log(f'val/hd_acc',
                  pc_acc,
                  on_step=False,
                  on_epoch=True,
@@ -255,8 +273,10 @@ class GridCellSystem(pl.LightningModule):
                                          pc_logits: torch.Tensor,
                                          pc_or_pos_targets: torch.Tensor,
                                          target_pos: torch.Tensor,
+                                         hd_logits: torch.Tensor,
+                                         hd_targets: torch.Tensor,
                                          num_top_pcs: int = 3,
-                                         ) -> Tuple[torch.Tensor, torch.Tensor]:
+                                         ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
         _, top_k_indices = torch.topk(pc_logits, k=num_top_pcs, dim=2)
 
@@ -271,15 +291,19 @@ class GridCellSystem(pl.LightningModule):
         # Shape: (batch size, sequence length, 2)
         pred_pos = torch.mean(gathered_means, dim=2)
 
-        # Multiplying by 100 converts from meters to centimeters.
-        pos_decoding_err = 100. * torch.mean(torch.linalg.norm(pred_pos - target_pos, dim=2))
+        pos_decoding_err = torch.mean(torch.linalg.norm(pred_pos - target_pos, dim=2))
 
         pc_acc = torch.mean(
             torch.eq(torch.argmax(pc_logits, dim=2),
                      torch.argmax(pc_or_pos_targets, dim=2)).float()
         )
 
-        return pos_decoding_err, pc_acc
+        hd_acc = torch.mean(
+            torch.eq(torch.argmax(hd_logits, dim=2),
+                        torch.argmax(hd_targets, dim=2)).float()
+        )
+
+        return pos_decoding_err, pc_acc, hd_acc
 
     def compute_targets(self,
                         batch: Dict[str, torch.Tensor]):
@@ -389,13 +413,15 @@ class SorscherRecurrentNetwork(pl.LightningModule):
 
         self.pc_or_pos_init_layer = torch.nn.Linear(
             in_features=self.wandb_config['n_place_cells'] if self.wandb_config['hidden_state_init'] else 2,
-            out_features=2 * self.wandb_config['n_hidden_units'],  # 2 is for LSTM
-            bias=self.wandb_config['use_bias'],
+            out_features=2 * self.wandb_config['n_hidden_units'],  # 2 is for LSTM state.
+            # bias=self.wandb_config['use_bias'],
+            bias=False,  # Copied from Sorscher et al. 2022
         )
         self.hd_init_layer = torch.nn.Linear(
             in_features=self.wandb_config['n_head_direction_cells'],
-            out_features=2 * self.wandb_config['n_hidden_units'],  # 2 is for LSTM.
-            bias=self.wandb_config['use_bias'],
+            out_features=2 * self.wandb_config['n_hidden_units'],  # 2 is for LSTM state.
+            # bias=self.wandb_config['use_bias'],
+            bias=False,  # Copied from Sorscher et al. 2022
         )
         if self.wandb_config['rnn_type'] == 'rnn':
             # self.recurrent_layer = torch.nn.RNN(
@@ -421,14 +447,16 @@ class SorscherRecurrentNetwork(pl.LightningModule):
         self.readout_one_layer = torch.nn.Linear(
             in_features=self.wandb_config['n_hidden_units'],
             out_features=self.wandb_config['n_readout_units'],
-            bias=self.wandb_config['use_bias'],
+            # bias=self.wandb_config['use_bias'],
+            bias=True,  # Copied from Sorscher et al. 2022
         )
         self.readout_two_layer = torch.nn.Linear(
             in_features=self.wandb_config['n_readout_units'],
             out_features=self.wandb_config['n_head_direction_cells'] + self.wandb_config['n_place_cells'],
-            bias=self.wandb_config['use_bias'],
+            # bias=self.wandb_config['use_bias'],
+            bias=True,  # Copied from Sorscher et al. 2022
         )
-        assert 0. < self.wandb_config['keep_prob'] < 1.
+        assert 0. < self.wandb_config['keep_prob'] <= 1.
         self.dropout_layer = torch.nn.Dropout(
             p=1.0 - self.wandb_config['keep_prob'],
         )

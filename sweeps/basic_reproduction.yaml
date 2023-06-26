@@ -29,7 +29,7 @@ parameters:
     ]
   n_epochs:
     values: [
-      500,
+      10000,
     ]
   n_batches_per_epoch:
     values: [
@@ -59,7 +59,11 @@ parameters:
     values: [
       0.05,
     ]
-  sequence_length:
+  sequence_length_train:
+    values: [
+      100,
+    ]
+  sequence_length_val:
     values: [
       100,
     ]
@@ -69,9 +73,9 @@ parameters:
     values: [True]
   use_bias:
     values: [
-      False
+      True,
     ]
   weight_decay:
-      values: [
-        0.00001,
-      ]
+    values: [
+      0.00001,
+    ]

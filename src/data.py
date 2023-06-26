@@ -36,7 +36,7 @@ class TrajectoryDataset(Dataset):
                     batch_size=1,
                     sequence_length=self.wandb_config[f'sequence_length_{self.split}'],
                     dt=self.wandb_config['dt'],
-                    box_size=self.wandb_config['box_width_in_m'] / 2.,
+                    half_box_width=self.wandb_config['box_width_in_m'] / 2.,
                 )
                 # Remove the batch dimension.
                 generated_data = {k: v[0] for k, v in generated_data.items()}
@@ -64,7 +64,7 @@ class TrajectoryDataset(Dataset):
                 batch_size=1,
                 sequence_length=self.wandb_config[f'sequence_length_{self.split}'],
                 dt=self.wandb_config['dt'],
-                box_size=self.wandb_config['box_width_in_m'] / 2.,
+                half_box_width=self.wandb_config['box_width_in_m'] / 2.,
             )
             item = {k: v[0].astype(np.float32) for k, v in generated_data.items()}
 
@@ -156,7 +156,7 @@ def generate_trajectory(batch_size: int,
                         dt: float,
                         b: float = 0.13 * 2 * np.pi,  # forward velocity rayleigh dist scale (m/sec),
                         border_region: float = 0.03,  # meters
-                        box_size: float = 1.1,  # meters
+                        half_box_width: float = 1.1,  # meters
                         mu: float = 0.0,
                         sigma: float = 5.76 * 2  # stdev rotation velocity (rads/sec)
                         ):
@@ -168,7 +168,7 @@ def generate_trajectory(batch_size: int,
 
     for batch_idx in range(batch_size):
 
-        position[batch_idx, 0] = np.random.uniform(-box_size, box_size, 2)
+        position[batch_idx, 0] = np.random.uniform(-half_box_width, half_box_width, 2)
         head_dir[batch_idx, 0] = np.random.uniform(0, 2 * np.pi)
 
         # generate sequence of random boosts and turns
@@ -179,7 +179,7 @@ def generate_trajectory(batch_size: int,
         for i in range(1, sequence_length + 1):
             # If in border region, turn and slow down
             d_wall, a_wall = min_dist_angle(position[batch_idx, i - 1], head_dir[batch_idx, i - 1] % (2 * np.pi),
-                                            box_size=box_size)
+                                            box_size=half_box_width)
             if d_wall < border_region and np.abs(a_wall) < np.pi / 2:
                 turning[batch_idx, i - 1] = 1
                 turn_angle = np.sign(a_wall) * (np.pi / 2 - np.abs(a_wall)) + dt * random_turn[i]
@@ -209,4 +209,11 @@ def generate_trajectory(batch_size: int,
         'target_pos': position[:, 1:, :],
         'target_hd': head_dir[:, 1:, np.newaxis]
     }
+
+    # if generated_data['target_pos'].min() <= -half_box_width:
+    #     print(10)
+    #
+    # if generated_data['target_pos'].max() >= half_box_width:
+    #     print(11)
+
     return generated_data
