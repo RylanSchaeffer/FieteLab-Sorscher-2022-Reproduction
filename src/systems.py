@@ -119,21 +119,33 @@ class GridCellSystem(pl.LightningModule):
                  on_epoch=False,
                  sync_dist=True)
 
-
         return loss_results['total_loss']
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int):
 
-        return
-
-        init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(batch=batch)
+        # return
+        init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(
+            batch=batch)
         forward_results = self.recurrent_network.forward(
             init_hd_values=init_hd_values,
             init_pc_or_pos_values=init_pc_or_pos_values,
             recurrent_inputs=recurrent_inputs,
         )
+
+        # import matplotlib.pyplot as plt
+        #
+        # target_pos_numpy = batch['target_pos'].cpu().detach().numpy()
+        # plt.close()
+        # for i in range(10):
+        #     plt.plot(target_pos_numpy[i, :, 0], target_pos_numpy[i, :, 1])
+        # plt.show()
+        #
+        # plt.close()
+        # recurrent_inputs_numpy = recurrent_inputs.cpu().detach().numpy()
+        # init_pos_numpy = batch['init_pos'].cpu().detach().numpy()
+        # # for i in range(10):
 
         hd_targets, pc_or_pos_targets = self.compute_targets(batch=batch)
         loss_results = self.compute_losses(
@@ -253,14 +265,16 @@ class GridCellSystem(pl.LightningModule):
                        hd_logits: torch.Tensor,
                        ) -> Dict[str, torch.Tensor]:
 
-        # Torch cross entropy frustratingly requires the classes to be in the 1st dimension.
+        # Torch cross entropy frustratingly requires the classes to be in the 1st dimension
+        # and also requires the tensors to be contiguous, so we transpose then make contiguous.
         pc_loss = torch.mean(ce_loss_fn(
             input=pc_logits.transpose(1, 2).contiguous(),
-            target=torch.argmax(pc_or_pos_targets, dim=2)
+            target=pc_or_pos_targets.transpose(1, 2).contiguous(),
         ))
         hd_loss = torch.mean(ce_loss_fn(
             input=hd_logits.transpose(1, 2).contiguous(),
-            target=torch.argmax(hd_targets, dim=2)))
+            target=hd_targets.transpose(1, 2).contiguous(),
+        ))
         total_loss = pc_loss + hd_loss
         losses_results = {
             'pc_loss': pc_loss,
