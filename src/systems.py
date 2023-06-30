@@ -37,6 +37,7 @@ class GridCellSystem(pl.LightningModule):
             pos_min=-self.wandb_config['box_width_in_m'] / 2,
             pos_max=self.wandb_config['box_width_in_m'] / 2,
         )
+
         self.hd_ensemble = HeadDirectionCellEnsemble(
             n_cells=self.wandb_config['n_head_direction_cells'],
             concentration=self.wandb_config['head_direction_cell_concentration'],

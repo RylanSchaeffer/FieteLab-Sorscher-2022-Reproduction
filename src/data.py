@@ -201,14 +201,17 @@ def generate_trajectory(batch_size: int,
 
     # All arrays have shape (batch size = 1, appropriate temporal length, dim of variable)
     generated_data = {
-        'init_pos': position[:, 0, np.newaxis, :],
-        'init_hd': head_dir[:, 0, np.newaxis, np.newaxis],
-        'ego_speed': ego_speed[:, :-1, np.newaxis],
-        'theta_x': theta_x[:, :, np.newaxis],
-        'theta_y': theta_y[:, :, np.newaxis],
-        'target_pos': position[:, 1:, :],
-        'target_hd': head_dir[:, 1:, np.newaxis]
+        'init_pos': position[:, 0, np.newaxis, :],  # Consistent
+        'init_hd': head_dir[:, 0, np.newaxis, np.newaxis],  # Consistent
+        'ego_speed': ego_speed[:, :-2, np.newaxis],  # Consistent
+        'theta_x': theta_x[:, :-1, np.newaxis],  # Consistent
+        'theta_y': theta_y[:, :-1, np.newaxis],  # Consistent
+        'target_pos': position[:, 1:-1, :],  # Consistent
+        'target_hd': head_dir[:, 1:-1, np.newaxis]  # Consistent
     }
+
+    # Note! The data actually doesn't stay inside the box. DeepMind's code is bugged.
+    # It ventures a little outside. I guess we don't care?
 
     # if generated_data['target_pos'].min() <= -half_box_width:
     #     print(10)

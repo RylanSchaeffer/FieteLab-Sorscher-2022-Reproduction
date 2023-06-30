@@ -107,16 +107,19 @@ class PlaceCellEnsemble(CellEnsemble, pl.LightningModule):
         self.means = torch.nn.Parameter(
             (pos_max - pos_min) * torch.rand(size=(self.n_cells, 2), device=self.device) + pos_min,
             requires_grad=False)
-        self.variances = torch.nn.Parameter(
-            torch.ones((self.n_cells, 2), device=self.device) * stdev ** 2,
-            requires_grad=False)
+        assert -1.1 <= self.means.min()
+        assert self.means.max() <= 1.1
+        # self.variances = torch.nn.Parameter(
+        #     torch.ones((self.n_cells, 2), device=self.device) * stdev * stdev,
+        #     requires_grad=False)
+        self.variances = stdev * stdev
 
     def unnor_logpdf(self,
                      positions: torch.Tensor,
                      ) -> torch.Tensor:
         # Output the probability of each component at each point (BxTxN)
         diff = positions[:, :, np.newaxis, :] - self.means[np.newaxis, np.newaxis, ...]
-        unnor_logp = -0.5 * torch.sum((diff ** 2) / self.variances, dim=-1)
+        unnor_logp = -0.5 * torch.linalg.norm(diff, dim=-1) / self.variances
         return unnor_logp
 
 
@@ -134,10 +137,11 @@ class HeadDirectionCellEnsemble(CellEnsemble, pl.LightningModule):
             soft_init=soft_init)
         # Create a random Von Mises with fixed precision over the angles.
         # Need to make these parameters so they're moved onto the GPU by Lightning!
-        self.means = torch.nn.Parameter(2. * np.pi * torch.rand(n_cells) - np.pi,
+        self.means = torch.nn.Parameter(2. * np.pi * torch.rand(n_cells, device=self.device) - np.pi,
                                         requires_grad=False)
-        self.kappa = torch.nn.Parameter(concentration * torch.ones(n_cells),
-                                        requires_grad=False)
+        # self.kappa = torch.nn.Parameter(concentration * torch.ones(n_cells, device=self.device),
+        #                                 requires_grad=False)
+        self.kappa = concentration
 
     def unnor_logpdf(self,
                      x: torch.Tensor,
