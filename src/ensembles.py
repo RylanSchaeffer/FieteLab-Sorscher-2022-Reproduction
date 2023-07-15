@@ -8,11 +8,9 @@ import torch.nn
 class CellEnsemble(pl.LightningModule):
     """Abstract parent class for place and head direction cell ensembles."""
 
-    def __init__(self,
-                 n_cells,
-                 soft_targets: str = 'softmax',
-                 soft_init: str = 'softmax'):
-
+    def __init__(
+        self, n_cells, soft_targets: str = "softmax", soft_init: str = "softmax"
+    ):
         super().__init__()
         self.n_cells = n_cells
         if soft_targets not in ["softmax", "voronoi", "sample", "normalized"]:
@@ -24,15 +22,12 @@ class CellEnsemble(pl.LightningModule):
         if soft_init is None:
             self.soft_init = soft_targets
         else:
-            if soft_init not in [
-                "softmax", "voronoi", "sample", "normalized", "zeros"
-            ]:
+            if soft_init not in ["softmax", "voronoi", "sample", "normalized", "zeros"]:
                 raise ValueError
             else:
                 self.soft_init = soft_init
 
-    def get_targets(self,
-                    x: torch.Tensor):
+    def get_targets(self, x: torch.Tensor):
         """Type of target."""
 
         if self.soft_targets == "normalized":
@@ -72,15 +67,15 @@ class CellEnsemble(pl.LightningModule):
         if self.soft_targets == "normalized":
             smoothing = 1e-2
             loss = tf.nn.sigmoid_cross_entropy_with_logits(
-                labels=(1. - smoothing) * targets + smoothing * 0.5,
+                labels=(1.0 - smoothing) * targets + smoothing * 0.5,
                 logits=predictions,
-                name="ensemble_loss")
+                name="ensemble_loss",
+            )
             loss = torch.mean(loss, dim=-1)
         else:
             loss = tf.nn.softmax_cross_entropy_with_logits(
-                labels=targets,
-                logits=predictions,
-                name="ensemble_loss")
+                labels=targets, logits=predictions, name="ensemble_loss"
+            )
         return loss
 
     def log_posterior(self, x):
@@ -92,21 +87,24 @@ class CellEnsemble(pl.LightningModule):
 class PlaceCellEnsemble(CellEnsemble, pl.LightningModule):
     """Calculates the dist over place cells given an absolute position."""
 
-    def __init__(self,
-                 n_cells: int,
-                 stdev: float = 0.35,
-                 pos_min: float = -5.,
-                 pos_max: float = 5,
-                 soft_targets: str = 'softmax',
-                 soft_init: str = 'softmax'):
+    def __init__(
+        self,
+        n_cells: int,
+        stdev: float = 0.35,
+        pos_min: float = -5.0,
+        pos_max: float = 5,
+        soft_targets: str = "softmax",
+        soft_init: str = "softmax",
+    ):
         super(PlaceCellEnsemble, self).__init__(
-            n_cells=n_cells,
-            soft_targets=soft_targets,
-            soft_init=soft_init)
+            n_cells=n_cells, soft_targets=soft_targets, soft_init=soft_init
+        )
         # Create a random MoG with fixed cov over the position (Nx2)
         self.means = torch.nn.Parameter(
-            (pos_max - pos_min) * torch.rand(size=(self.n_cells, 2), device=self.device) + pos_min,
-            requires_grad=False)
+            (pos_max - pos_min) * torch.rand(size=(self.n_cells, 2), device=self.device)
+            + pos_min,
+            requires_grad=False,
+        )
         assert -1.1 <= self.means.min()
         assert self.means.max() <= 1.1
         # self.variances = torch.nn.Parameter(
@@ -114,9 +112,10 @@ class PlaceCellEnsemble(CellEnsemble, pl.LightningModule):
         #     requires_grad=False)
         self.variances = stdev * stdev
 
-    def unnor_logpdf(self,
-                     positions: torch.Tensor,
-                     ) -> torch.Tensor:
+    def unnor_logpdf(
+        self,
+        positions: torch.Tensor,
+    ) -> torch.Tensor:
         # Output the probability of each component at each point (BxTxN)
         diff = positions[:, :, np.newaxis, :] - self.means[np.newaxis, np.newaxis, ...]
         unnor_logp = -0.5 * torch.linalg.norm(diff, dim=-1) / self.variances
@@ -126,26 +125,30 @@ class PlaceCellEnsemble(CellEnsemble, pl.LightningModule):
 class HeadDirectionCellEnsemble(CellEnsemble, pl.LightningModule):
     """Calculates the dist over HD cells given an absolute angle."""
 
-    def __init__(self,
-                 n_cells: int,
-                 concentration: float = 20,
-                 soft_targets: str = 'softmax',
-                 soft_init: str = 'softmax'):
+    def __init__(
+        self,
+        n_cells: int,
+        concentration: float = 20,
+        soft_targets: str = "softmax",
+        soft_init: str = "softmax",
+    ):
         super(HeadDirectionCellEnsemble, self).__init__(
-            n_cells=n_cells,
-            soft_targets=soft_targets,
-            soft_init=soft_init)
+            n_cells=n_cells, soft_targets=soft_targets, soft_init=soft_init
+        )
         # Create a random Von Mises with fixed precision over the angles.
         # Need to make these parameters so they're moved onto the GPU by Lightning!
-        self.means = torch.nn.Parameter(2. * np.pi * torch.rand(n_cells, device=self.device) - np.pi,
-                                        requires_grad=False)
+        self.means = torch.nn.Parameter(
+            2.0 * np.pi * torch.rand(n_cells, device=self.device) - np.pi,
+            requires_grad=False,
+        )
         # self.kappa = torch.nn.Parameter(concentration * torch.ones(n_cells, device=self.device),
         #                                 requires_grad=False)
         self.kappa = concentration
 
-    def unnor_logpdf(self,
-                     x: torch.Tensor,
-                     ) -> torch.Tensor:
+    def unnor_logpdf(
+        self,
+        x: torch.Tensor,
+    ) -> torch.Tensor:
         # Shape: (batch, time, dim)
         return self.kappa * torch.cos(x - self.means[np.newaxis, np.newaxis, :])
 

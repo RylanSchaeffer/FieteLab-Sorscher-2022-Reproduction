@@ -3,7 +3,11 @@ import json
 import os
 import pprint
 import lightning.pytorch as pl
-from lightning.pytorch.callbacks import DeviceStatsMonitor, LearningRateMonitor, ModelCheckpoint
+from lightning.pytorch.callbacks import (
+    DeviceStatsMonitor,
+    LearningRateMonitor,
+    ModelCheckpoint,
+)
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.profilers import PyTorchProfiler
 import shutil
@@ -28,14 +32,13 @@ torch.autograd.set_detect_anomaly(True)
 # print('CUDA available: ', torch.cuda.is_available())
 # print('CUDA device count: ', torch.cuda.device_count())
 
-run = wandb.init(project='sorscher-2022-reproduction',
-                 config=default_config)
+run = wandb.init(project="sorscher-2022-reproduction", config=default_config)
 # Convert to a dictionary; otherwise, can't distribute because W&B
 # config is not pickle-able.
 wandb_config = dict(wandb.config)
 
 # Convert "None" (type: str) to None (type: NoneType)
-for key in ['accumulate_grad_batches', 'gradient_clip_val', 'learning_rate_scheduler']:
+for key in ["accumulate_grad_batches", "gradient_clip_val", "learning_rate_scheduler"]:
     if isinstance(wandb_config[key], str):
         if wandb_config[key] == "None":
             wandb_config[key] = None
@@ -43,25 +46,22 @@ for key in ['accumulate_grad_batches', 'gradient_clip_val', 'learning_rate_sched
 # Create checkpoint directory for this run, and save the config to the directory.
 run_checkpoint_dir = os.path.join("lightning_logs", wandb.run.id)
 os.makedirs(run_checkpoint_dir)
-with open(os.path.join(run_checkpoint_dir, 'wandb_config.json'), 'w') as fp:
+with open(os.path.join(run_checkpoint_dir, "wandb_config.json"), "w") as fp:
     json.dump(obj=wandb_config, fp=fp)
 
 # Make sure we set all seeds for maximal reproducibility!
-torch_generator = set_seed(seed=wandb_config['seed'])
+torch_generator = set_seed(seed=wandb_config["seed"])
 
 wandb_logger = WandbLogger(experiment=run)
-system = GridCellSystem(wandb_config=wandb_config,
-                        wandb_logger=wandb_logger)
+system = GridCellSystem(wandb_config=wandb_config, wandb_logger=wandb_logger)
 
 # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.callbacks.LearningRateMonitor.html
-lr_monitor_callback = LearningRateMonitor(
-    logging_interval='step',
-    log_momentum=True)
+lr_monitor_callback = LearningRateMonitor(logging_interval="step", log_momentum=True)
 
 checkpoint_callback = ModelCheckpoint(
-    monitor='train/loss=total_loss',
+    monitor="train/loss=total_loss",
     save_top_k=1,
-    mode='min',
+    mode="min",
 )
 
 callbacks = [
@@ -86,28 +86,28 @@ trajectory_datamodule = TrajectoryDataModule(
     run_checkpoint_dir=run_checkpoint_dir,
     torch_generator=torch_generator,
 )
-print('Created Trajectory Datamodule.')
+print("Created Trajectory Datamodule.")
 
 # https://pytorch-lightning.readthedocs.io/en/latest/api/pytorch_lightning.trainer.trainer.Trainer.html
 trainer = pl.Trainer(
-    accelerator='auto',
-    accumulate_grad_batches=wandb_config['accumulate_grad_batches'],
+    accelerator="auto",
+    accumulate_grad_batches=wandb_config["accumulate_grad_batches"],
     callbacks=callbacks,
     check_val_every_n_epoch=250,
     default_root_dir=run_checkpoint_dir,
     deterministic=True,
-    devices='auto',
+    devices="auto",
     # fast_dev_run=True,
     fast_dev_run=False,
     logger=wandb_logger,
     log_every_n_steps=25,
     # overfit_batches=1,  # useful for debugging
-    gradient_clip_val=wandb_config['gradient_clip_val'],
-    max_epochs=wandb_config['n_epochs'],
+    gradient_clip_val=wandb_config["gradient_clip_val"],
+    max_epochs=wandb_config["n_epochs"],
     # profiler="simple",  # Simplest profiler
     # profiler="advanced",  # More advanced profiler
     # profiler=PyTorchProfiler(filename=),  # PyTorch specific profiler
-    precision=wandb_config['precision'],
+    precision=wandb_config["precision"],
     # track_grad_norm=2,
 )
 
@@ -115,10 +115,9 @@ trainer = pl.Trainer(
 # See: https://github.com/Lightning-AI/lightning/issues/13039
 # See: https://github.com/Lightning-AI/lightning/discussions/9201
 # See: https://github.com/Lightning-AI/lightning/discussions/151
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     pp = pprint.PrettyPrinter(indent=4)
-    print('W&B Config:')
+    print("W&B Config:")
     pp.pprint(wandb_config)
 
     trainer.fit(
@@ -127,4 +126,4 @@ if __name__ == '__main__':
     )
 
     # Delete the data after training finished, to save disk space.
-    shutil.rmtree(os.path.join(run_checkpoint_dir, 'data'))
+    shutil.rmtree(os.path.join(run_checkpoint_dir, "data"))
