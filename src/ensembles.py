@@ -100,6 +100,7 @@ class PlaceCellEnsemble(CellEnsemble, pl.LightningModule):
             n_cells=n_cells, soft_targets=soft_targets, soft_init=soft_init
         )
         # Create a random MoG with fixed cov over the position (Nx2)
+        # This need to be a parameter, otherwise Lightning won't automatically move to GPU.
         self.means = torch.nn.Parameter(
             (pos_max - pos_min) * torch.rand(size=(self.n_cells, 2), device=self.device)
             + pos_min,

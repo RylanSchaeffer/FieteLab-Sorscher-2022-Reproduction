@@ -231,14 +231,24 @@ def generate_trajectory(
 
     # All arrays have shape (batch size = 1, appropriate temporal length, dim of variable)
     generated_data = {
-        "init_pos": position[:, 0, np.newaxis, :],
-        "init_hd": head_dir[:, 0, np.newaxis, np.newaxis],
-        "ego_speed": ego_speed[:, :-2, np.newaxis],
-        "theta_x": theta_x[:, :-1, np.newaxis],
-        "theta_y": theta_y[:, :-1, np.newaxis],
-        "target_pos": position[:, 1:-1, :],
-        "target_hd": head_dir[:, 1:-1, np.newaxis],
-        "ego_velocity": np.diff(position[:, :-1, :], axis=1),
+        "init_pos": position[:, 0, np.newaxis, :],  # Shape: (batch_size, 1, 2)
+        "init_hd": head_dir[:, 0, np.newaxis, np.newaxis],  # Shape: (batch_size, 1, 1)
+        "ego_speed": ego_speed[
+            :, :-2, np.newaxis
+        ],  # Shape: (batch_size, sequence_length-2, 1)
+        "theta_x": theta_x[
+            :, :-1, np.newaxis
+        ],  # Shape: (batch_size, sequence_length-1, 1)
+        "theta_y": theta_y[
+            :, :-1, np.newaxis
+        ],  # Shape: (batch_size, sequence_length-1, 1)
+        "target_pos": position[:, 1:-1, :],  # Shape: (batch_size, sequence_length-1, 2)
+        "target_hd": head_dir[
+            :, 1:-1, np.newaxis
+        ],  # Shape: (batch_size, sequence_length-1, 1)
+        "ego_velocity": np.diff(
+            position[:, :-1, :], axis=1
+        ),  # Shape: (batch_size, sequence_length-1, 2)
     }
 
     # Note! The data actually doesn't stay inside the box. DeepMind's code is bugged.

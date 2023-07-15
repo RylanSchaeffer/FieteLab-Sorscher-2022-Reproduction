@@ -82,13 +82,15 @@ class GridCellSystem(pl.LightningModule):
             recurrent_inputs=recurrent_inputs,
         )
 
-        hd_targets, pc_or_pos_targets = self.compute_targets(batch=batch)
-        loss_results = self.compute_losses(
-            pc_or_pos_targets=pc_or_pos_targets,
-            pc_logits=forward_results["pc_logits"],
-            hd_targets=hd_targets,
-            hd_logits=forward_results["hd_logits"],
-        )
+        if self.wandb_config["target_var"] == "pc_hd":
+            hd_targets, pc_targets = self.compute_targets(batch=batch)
+            loss_results = self.compute_losses(
+                pc_or_pos_targets=pc_targets,
+                pc_logits=forward_results["pc_logits"],
+                hd_targets=hd_targets,
+                hd_logits=forward_results["hd_logits"],
+                pos_targets=batch["target_pos"],
+            )
 
         for loss_str, loss_val in loss_results.items():
             self.log(
@@ -101,7 +103,7 @@ class GridCellSystem(pl.LightningModule):
 
         pos_decoding_err, pc_acc, hd_acc = self.compute_pos_decoding_err_and_acc(
             pc_logits=forward_results["pc_logits"],
-            pc_or_pos_targets=pc_or_pos_targets,
+            pc_targets=pc_targets,
             target_pos=batch["target_pos"],
             hd_logits=forward_results["hd_logits"],
             hd_targets=hd_targets,
@@ -165,7 +167,7 @@ class GridCellSystem(pl.LightningModule):
 
         pos_decoding_err, pc_acc, hd_acc = self.compute_pos_decoding_err_and_acc(
             pc_logits=forward_results["pc_logits"],
-            pc_or_pos_targets=pc_or_pos_targets,
+            pc_targets=pc_or_pos_targets,
             target_pos=batch["target_pos"],
             hd_logits=forward_results["hd_logits"],
             hd_targets=hd_targets,
@@ -275,6 +277,7 @@ class GridCellSystem(pl.LightningModule):
         pc_logits: torch.Tensor,
         hd_targets: torch.Tensor,
         hd_logits: torch.Tensor,
+        target_pos: torch.Tensor,
     ) -> Dict[str, torch.Tensor]:
         # Torch cross entropy frustratingly requires the classes to be in the 1st dimension
         # and also requires the tensors to be contiguous, so we transpose then make contiguous.
@@ -290,18 +293,24 @@ class GridCellSystem(pl.LightningModule):
                 target=hd_targets.transpose(1, 2).contiguous(),
             )
         )
-        total_loss = pc_loss + hd_loss
+        pos_loss = torch.mean(torch.square(target_pos - pc_or_pos_targets))
+
+        if self.wandb_config["target_var"] == "pc_hd":
+            total_loss = pc_loss + hd_loss
+        elif self.wandb_config["target_var"] == "pos":
+            total_loss = pos_loss
         losses_results = {
             "pc_loss": pc_loss,
             "hd_loss": hd_loss,
             "total_loss": total_loss,
+            "pos_loss": pos_loss,
         }
         return losses_results
 
     def compute_pos_decoding_err_and_acc(
         self,
         pc_logits: torch.Tensor,
-        pc_or_pos_targets: torch.Tensor,
+        pc_targets: torch.Tensor,
         target_pos: torch.Tensor,
         hd_logits: torch.Tensor,
         hd_targets: torch.Tensor,
@@ -324,7 +333,7 @@ class GridCellSystem(pl.LightningModule):
 
         pc_acc = torch.mean(
             torch.eq(
-                torch.argmax(pc_logits, dim=2), torch.argmax(pc_or_pos_targets, dim=2)
+                torch.argmax(pc_logits, dim=2), torch.argmax(pc_targets, dim=2)
             ).float()
         )
 

@@ -31,6 +31,8 @@ default_config = {
     "sequence_length_train": 31,
     "sequence_length_val": 37,
     "shuffle_train": True,
+    # "target_var": "pc_hd",
+    "target_var": "pos",
     "use_bias": False,
     "weight_decay": 1e-5,
 }
