@@ -117,9 +117,11 @@ class PlaceCellEnsemble(CellEnsemble, pl.LightningModule):
         self,
         positions: torch.Tensor,
     ) -> torch.Tensor:
-        # Output the probability of each component at each point (BxTxN)
+        # Output the probability of each component at each point (BxTxN)  # Shape: (batch, time, n_cells, 2)
         diff = positions[:, :, np.newaxis, :] - self.means[np.newaxis, np.newaxis, ...]
-        unnor_logp = -0.5 * torch.linalg.norm(diff, dim=-1) / self.variances
+        unnor_logp = (
+            -0.5 * torch.square(torch.linalg.norm(diff, dim=-1)) / self.variances
+        )
         return unnor_logp
 
 

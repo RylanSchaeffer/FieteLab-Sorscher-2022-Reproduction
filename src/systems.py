@@ -76,21 +76,23 @@ class GridCellSystem(pl.LightningModule):
         init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(
             batch=batch
         )
+
+        hd_targets, pc_targets = self.compute_hd_and_pc_targets(batch=batch)
+
         forward_results = self.recurrent_network.forward(
             init_hd_values=init_hd_values,
             init_pc_or_pos_values=init_pc_or_pos_values,
             recurrent_inputs=recurrent_inputs,
         )
 
-        if self.wandb_config["target_var"] == "pc_hd":
-            hd_targets, pc_targets = self.compute_targets(batch=batch)
-            loss_results = self.compute_losses(
-                pc_or_pos_targets=pc_targets,
-                pc_logits=forward_results["pc_logits"],
-                hd_targets=hd_targets,
-                hd_logits=forward_results["hd_logits"],
-                pos_targets=batch["target_pos"],
-            )
+        loss_results = self.compute_losses(
+            pc_targets=pc_targets,
+            pc_logits=forward_results["pc_logits"],
+            hd_targets=hd_targets,
+            hd_logits=forward_results["hd_logits"],
+            pos_targets=batch["target_pos"],
+            pos_logits=forward_results["pos_logits"],
+        )
 
         for loss_str, loss_val in loss_results.items():
             self.log(
@@ -107,6 +109,8 @@ class GridCellSystem(pl.LightningModule):
             target_pos=batch["target_pos"],
             hd_logits=forward_results["hd_logits"],
             hd_targets=hd_targets,
+            pos_logits=forward_results["pos_logits"],
+            pos_targets=batch["target_pos"],
         )
 
         self.log(
@@ -129,31 +133,22 @@ class GridCellSystem(pl.LightningModule):
         init_hd_values, init_pc_or_pos_values, recurrent_inputs = self.compute_inputs(
             batch=batch
         )
+
+        hd_targets, pc_targets = self.compute_hd_and_pc_targets(batch=batch)
+
         forward_results = self.recurrent_network.forward(
             init_hd_values=init_hd_values,
             init_pc_or_pos_values=init_pc_or_pos_values,
             recurrent_inputs=recurrent_inputs,
         )
 
-        # import matplotlib.pyplot as plt
-        #
-        # target_pos_numpy = batch['target_pos'].cpu().detach().numpy()
-        # plt.close()
-        # for i in range(10):
-        #     plt.plot(target_pos_numpy[i, :, 0], target_pos_numpy[i, :, 1])
-        # plt.show()
-        #
-        # plt.close()
-        # recurrent_inputs_numpy = recurrent_inputs.cpu().detach().numpy()
-        # init_pos_numpy = batch['init_pos'].cpu().detach().numpy()
-        # # for i in range(10):
-
-        hd_targets, pc_or_pos_targets = self.compute_targets(batch=batch)
         loss_results = self.compute_losses(
-            pc_or_pos_targets=pc_or_pos_targets,
+            pc_targets=pc_targets,
             pc_logits=forward_results["pc_logits"],
             hd_targets=hd_targets,
             hd_logits=forward_results["hd_logits"],
+            pos_targets=batch["target_pos"],
+            pos_logits=forward_results["pos_logits"],
         )
 
         for loss_str, loss_val in loss_results.items():
@@ -167,10 +162,12 @@ class GridCellSystem(pl.LightningModule):
 
         pos_decoding_err, pc_acc, hd_acc = self.compute_pos_decoding_err_and_acc(
             pc_logits=forward_results["pc_logits"],
-            pc_targets=pc_or_pos_targets,
+            pc_targets=pc_targets,
             target_pos=batch["target_pos"],
             hd_logits=forward_results["hd_logits"],
             hd_targets=hd_targets,
+            pos_logits=forward_results["pos_logits"],
+            pos_targets=batch["target_pos"],
         )
 
         self.log(
@@ -255,9 +252,13 @@ class GridCellSystem(pl.LightningModule):
             if self.wandb_config["hidden_state_init"] == "pc_hd":
                 # Shape: (batch size, 1, n_pc_cells)
                 init_pc_or_pos_values = self.pc_ensemble.get_init(batch["init_pos"])
-            else:
+            elif self.wandb_config["hidden_state_init"] == "pos_hd":
                 # Shape: (batch size, 1, 2)
                 init_pc_or_pos_values = batch["init_pos"]
+            else:
+                raise ValueError(
+                    f"Unknown hidden_state_init: {self.wandb_config['hidden_state_init']}"
+                )
 
             if self.wandb_config["input_var"] == "egocentric":
                 # Shape: (batch size, 1, 3)
@@ -267,24 +268,25 @@ class GridCellSystem(pl.LightningModule):
             elif self.wandb_config["input_var"] == "allocentric":
                 recurrent_inputs = batch["ego_velocity"]
             else:
-                raise NotImplementedError
+                raise ValueError(f"Unknown input_var: {self.wandb_config['input_var']}")
 
         return init_hd_values, init_pc_or_pos_values, recurrent_inputs
 
     def compute_losses(
         self,
-        pc_or_pos_targets: torch.Tensor,
+        pc_targets: torch.Tensor,
         pc_logits: torch.Tensor,
         hd_targets: torch.Tensor,
         hd_logits: torch.Tensor,
-        target_pos: torch.Tensor,
+        pos_targets: torch.Tensor,
+        pos_logits: torch.Tensor,
     ) -> Dict[str, torch.Tensor]:
-        # Torch cross entropy frustratingly requires the classes to be in the 1st dimension
+        # Torch cross entropy requires the classes to be in the 1st dimension
         # and also requires the tensors to be contiguous, so we transpose then make contiguous.
         pc_loss = torch.mean(
             ce_loss_fn(
                 input=pc_logits.transpose(1, 2).contiguous(),
-                target=pc_or_pos_targets.transpose(1, 2).contiguous(),
+                target=pc_targets.transpose(1, 2).contiguous(),
             )
         )
         hd_loss = torch.mean(
@@ -293,12 +295,14 @@ class GridCellSystem(pl.LightningModule):
                 target=hd_targets.transpose(1, 2).contiguous(),
             )
         )
-        pos_loss = torch.mean(torch.square(target_pos - pc_or_pos_targets))
+        pos_loss = torch.mean(torch.square(pos_targets - pos_logits))
 
         if self.wandb_config["target_var"] == "pc_hd":
             total_loss = pc_loss + hd_loss
         elif self.wandb_config["target_var"] == "pos":
             total_loss = pos_loss
+        else:
+            raise ValueError(f"Unknown target_var: {self.wandb_config['target_var']}")
         losses_results = {
             "pc_loss": pc_loss,
             "hd_loss": hd_loss,
@@ -314,22 +318,34 @@ class GridCellSystem(pl.LightningModule):
         target_pos: torch.Tensor,
         hd_logits: torch.Tensor,
         hd_targets: torch.Tensor,
+        pos_targets: torch.Tensor,
+        pos_logits: torch.Tensor,
         num_top_pcs: int = 3,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        _, top_k_indices = torch.topk(pc_logits, k=num_top_pcs, dim=2)
+        if self.wandb_config["target_var"] == "pc_hd":
+            _, top_k_indices = torch.topk(pc_logits, k=num_top_pcs, dim=2)
 
-        # Make sure top_k_indices is of type long, as it's required for indexing
-        # top_k_indices = top_k_indices.long()
+            # Make sure top_k_indices is of type long, as it's required for indexing
+            # top_k_indices = top_k_indices.long()
 
-        # Gathering using advanced indexing
-        # Shape: (batch size, sequence length, num_top_pcs, spatial coordinates = 2)
-        gathered_means = self.pc_ensemble.means[top_k_indices]
+            # Gathering using advanced indexing
+            # Shape: (batch size, sequence length, num_top_pcs, spatial coordinates = 2)
+            gathered_means = self.pc_ensemble.means[top_k_indices]
 
-        # Average across the top three PCs.
-        # Shape: (batch size, sequence length, 2)
-        pred_pos = torch.mean(gathered_means, dim=2)
+            # Average across the top three PCs.
+            # Shape: (batch size, sequence length, 2)
+            pred_pos = torch.mean(gathered_means, dim=2)
 
-        pos_decoding_err = torch.mean(torch.linalg.norm(pred_pos - target_pos, dim=2))
+            pos_decoding_err = torch.mean(
+                torch.linalg.norm(pred_pos - target_pos, dim=2)
+            )
+
+        elif self.wandb_config["target_var"] == "pos":
+            pos_decoding_err = torch.mean(
+                torch.linalg.norm(pos_targets - pos_logits, dim=2)
+            )
+        else:
+            raise ValueError(f"Unknown target_var: {self.wandb_config['target_var']}")
 
         pc_acc = torch.mean(
             torch.eq(
@@ -345,7 +361,7 @@ class GridCellSystem(pl.LightningModule):
 
         return pos_decoding_err, pc_acc, hd_acc
 
-    def compute_targets(self, batch: Dict[str, torch.Tensor]):
+    def compute_hd_and_pc_targets(self, batch: Dict[str, torch.Tensor]):
         with torch.no_grad():
             target_hd_values = self.hd_ensemble.get_targets(batch["target_hd"])
             target_pc_values = self.pc_ensemble.get_targets(batch["target_pos"])
@@ -452,7 +468,7 @@ class SorscherRecurrentNetwork(pl.LightningModule):
 
         self.pc_or_pos_init_layer = torch.nn.Linear(
             in_features=self.wandb_config["n_place_cells"]
-            if self.wandb_config["hidden_state_init"]
+            if self.wandb_config["hidden_state_init"] == "pc_hd"
             else 2,
             out_features=2
             * self.wandb_config["n_hidden_units"],  # 2 is for LSTM state.
@@ -478,7 +494,7 @@ class SorscherRecurrentNetwork(pl.LightningModule):
             raise NotImplementedError
         elif self.wandb_config["rnn_type"] == "lstm":
             self.recurrent_layer = torch.nn.LSTM(
-                input_size=3,
+                input_size=3 if self.wandb_config["input_var"] == "egocentric" else 2,
                 hidden_size=self.wandb_config["n_hidden_units"],
                 num_layers=1,
                 batch_first=True,
@@ -503,6 +519,11 @@ class SorscherRecurrentNetwork(pl.LightningModule):
         assert 0.0 < self.wandb_config["keep_prob"] <= 1.0
         self.dropout_layer = torch.nn.Dropout(
             p=1.0 - self.wandb_config["keep_prob"],
+        )
+        self.position_layer = torch.nn.Linear(
+            in_features=self.wandb_config["n_readout_units"],
+            out_features=2,
+            bias=self.wandb_config["use_bias"],
         )
 
     def forward(
@@ -530,17 +551,19 @@ class SorscherRecurrentNetwork(pl.LightningModule):
 
         lstm_activations, _ = self.recurrent_layer(recurrent_inputs, initial_state)
         g_activations = self.readout_one_layer(lstm_activations)
-        output_activations = self.readout_two_layer(self.dropout_layer(g_activations))
+        hd_and_pc_logits = self.readout_two_layer(self.dropout_layer(g_activations))
+        pos_logits = self.position_layer(g_activations)
 
         forward_results = {
             "lstm_activations": lstm_activations,
             "g_activations": g_activations,
-            "hd_logits": output_activations[
+            "hd_logits": hd_and_pc_logits[
                 :, :, : self.wandb_config["n_head_direction_cells"]
             ],
-            "pc_logits": output_activations[
+            "pc_logits": hd_and_pc_logits[
                 :, :, self.wandb_config["n_head_direction_cells"] :
             ],
+            "pos_logits": pos_logits,
         }
 
         return forward_results
