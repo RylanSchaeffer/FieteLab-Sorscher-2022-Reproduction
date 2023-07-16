@@ -6,7 +6,7 @@ default_config = {
     "box_height_in_m": 2.2,
     "box_width_in_m": 2.2,
     # "data_generation": "sampled_at_beginning",
-    'data_generation': 'sampled_at_every_step',
+    "data_generation": "sampled_at_every_step",
     "dt": 0.02,
     "gradient_clip_val": 1e-5,
     "head_direction_cell_concentration": 20.0,

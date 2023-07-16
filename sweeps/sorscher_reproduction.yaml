@@ -19,7 +19,7 @@ parameters:
   ]
   gradient_clip_val:
     values: [
-      0.00001,
+      1000,
     ]
   hidden_state_init:
     values: [ 'pc_hd' ]
@@ -27,15 +27,16 @@ parameters:
     values: [ 'egocentric' ]
   keep_prob:
     values: [
-      0.5,
+      0.99,
     ]
   learning_rate:
     values: [
+      0.001,
       0.01,
     ]
   n_epochs:
     values: [
-      10000,
+      1000,
     ]
   n_batches_per_epoch:
     values: [

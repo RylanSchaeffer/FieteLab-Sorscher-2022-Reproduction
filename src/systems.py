@@ -54,21 +54,22 @@ class GridCellSystem(pl.LightningModule):
         )
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        self.log(
-            f"train/target_pos_min",
-            batch["target_pos"].min(),
-            on_step=True,
-            on_epoch=False,
-            sync_dist=True,
-        )
-
-        self.log(
-            f"train/target_pos_max",
-            batch["target_pos"].max(),
-            on_step=True,
-            on_epoch=False,
-            sync_dist=True,
-        )
+        # DeepMind's trajectories go a little outside the box.
+        # self.log(
+        #     f"train/target_pos_min",
+        #     batch["target_pos"].min(),
+        #     on_step=True,
+        #     on_epoch=False,
+        #     sync_dist=True,
+        # )
+        #
+        # self.log(
+        #     f"train/target_pos_max",
+        #     batch["target_pos"].max(),
+        #     on_step=True,
+        #     on_epoch=False,
+        #     sync_dist=True,
+        # )
 
         # assert  >= (-self.wandb_config['box_width_in_m'] / 2.)
         # assert batch['target_pos'].max() <= (self.wandb_config['box_width_in_m'] / 2.)
