@@ -15,8 +15,7 @@ parameters:
   ]
   data_generation:
     values: [
-      "sampled_at_beginning",
-      "sampled_each_batch",
+      "sampled_at_every_step",
   ]
   gradient_clip_val:
     values: [
