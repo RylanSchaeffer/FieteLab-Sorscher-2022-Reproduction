@@ -232,7 +232,7 @@ class GridCellSystem(pl.LightningModule):
             )
             for q, s in zip(quantiles, score_90_quantiles):
                 self.log(
-                    f"val/{activation_str}_score_90_quant={q}",
+                    f"{activation_str}/score_90_quant={q}",
                     s,
                     on_step=False,
                     on_epoch=True,
