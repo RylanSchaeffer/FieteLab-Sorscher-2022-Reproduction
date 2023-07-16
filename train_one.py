@@ -125,5 +125,5 @@ if __name__ == "__main__":
         datamodule=trajectory_datamodule,
     )
 
-    # Delete the data after training finished, to save disk space.
+    # Delete the data after training finished to save disk space.
     shutil.rmtree(os.path.join(run_checkpoint_dir, "data"))

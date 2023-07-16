@@ -224,10 +224,13 @@ class GridCellSystem(pl.LightningModule):
             )
 
             quantiles = [0.5, 0.75, 0.9, 0.95, 0.99]
+            scores = lattice_scores_by_nbins_dict[ratemaps_2d.shape[1]][
+                "score_90_by_neuron"
+            ]
             score_90_quantiles = np.quantile(
-                a=lattice_scores_by_nbins_dict[ratemaps_2d.shape[1]][
-                    "score_90_by_neuron"
-                ],
+                a=scores[
+                    np.logical_not(np.isnan(scores))
+                ],  # Exclude NaNs from computing quantiles.
                 q=quantiles,
             )
             for q, s in zip(quantiles, score_90_quantiles):
