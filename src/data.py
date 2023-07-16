@@ -253,10 +253,8 @@ def generate_trajectory(
 
     # Note! The data actually doesn't stay inside the box. DeepMind's code is bugged.
     # It ventures a little outside. I guess we don't care?
-
     # if generated_data['target_pos'].min() <= -half_box_width:
     #     print(10)
-    #
     # if generated_data['target_pos'].max() >= half_box_width:
     #     print(11)
 
