@@ -19,7 +19,7 @@ parameters:
   ]
   gradient_clip_val:
     values: [
-      0.00001,
+      "None"
     ]
   hidden_state_init:
     values: [ 'pc_hd' ]

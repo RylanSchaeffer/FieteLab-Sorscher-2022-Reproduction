@@ -13,6 +13,10 @@ parameters:
     values: [
       100,
     ]
+  data_generation:
+    values: [
+      "sampled_at_beginning"
+    ]
   gradient_clip_val:
     values: [
       0.00001,
