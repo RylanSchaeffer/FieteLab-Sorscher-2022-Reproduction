@@ -190,6 +190,7 @@ class GridCellSystem(pl.LightningModule):
             (forward_results["lstm_activations"], "lstm"),
             (forward_results["g_activations"], "g"),
         ]:
+            # If we only have 1 readout layer, g will not exist.
             if possible_tensor is None:
                 continue
 
@@ -537,7 +538,7 @@ class SorscherRecurrentNetwork(pl.LightningModule):
             p=1.0 - self.wandb_config["keep_prob"],
         )
         self.position_layer = torch.nn.Linear(
-            in_features=self.wandb_config["n_readout_units"],
+            in_features=self.wandb_config["n_hidden_units"],
             out_features=2,
             bias=self.wandb_config["use_bias"],
         )
