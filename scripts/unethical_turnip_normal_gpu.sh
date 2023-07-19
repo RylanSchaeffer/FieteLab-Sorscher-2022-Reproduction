@@ -3,7 +3,7 @@
 #SBATCH --mem=12G               # RAM
 #SBATCH --gres=gpu:1
 #SBATCH --constraint=12GB
-#SBATCH --time=24:00:00         # total run time limit (D-HH:MM:SS)
+#SBATCH --time=36:00:00         # total run time limit (D-HH:MM:SS)
 #SBATCH --mail-type=FAIL
 
 id=${1}
