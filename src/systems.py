@@ -185,15 +185,16 @@ class GridCellSystem(pl.LightningModule):
         self.log(f"val/hd_acc", pc_acc, on_step=False, on_epoch=True, sync_dist=True)
 
         positions_numpy = batch["target_pos"].cpu().detach().numpy()
-        lstm_activations_numpy = (
-            forward_results["lstm_activations"].cpu().detach().numpy()
-        )
-        g_activations_numpy = forward_results["g_activations"].cpu().detach().numpy()
 
-        for activations_array, activation_str in [
-            (lstm_activations_numpy, "lstm"),
-            (g_activations_numpy, "g"),
+        for possible_tensor, activation_str in [
+            (forward_results["lstm_activations"], "lstm"),
+            (forward_results["g_activations"], "g"),
         ]:
+            if possible_tensor is None:
+                continue
+
+            activations_array = possible_tensor.cpu().detach().numpy()
+
             # ratemaps_2d has shape (n_units, nbins_y, nbins_x)
             ratemaps_2d, extreme_coords = compute_ratemaps_2d(
                 positions=positions_numpy,
@@ -507,19 +508,30 @@ class SorscherRecurrentNetwork(pl.LightningModule):
         else:
             raise ValueError
 
-        self.readout_one_layer = torch.nn.Linear(
-            in_features=self.wandb_config["n_hidden_units"],
-            out_features=self.wandb_config["n_readout_units"],
-            # bias=self.wandb_config['use_bias'],
-            bias=True,  # Copied from Sorscher et al. 2022
-        )
-        self.readout_two_layer = torch.nn.Linear(
-            in_features=self.wandb_config["n_readout_units"],
-            out_features=self.wandb_config["n_head_direction_cells"]
-            + self.wandb_config["n_place_cells"],
-            # bias=self.wandb_config['use_bias'],
-            bias=True,  # Copied from Sorscher et al. 2022
-        )
+        # We will only have 1 or 2 readout layers, not more.
+        assert self.wandb_config["n_readout_layers"] in {1, 2}
+        if self.wandb_config["n_readout_layers"] == 2:
+            self.readout_one_layer = torch.nn.Linear(
+                in_features=self.wandb_config["n_hidden_units"],
+                out_features=self.wandb_config["n_readout_units"],
+                # bias=self.wandb_config['use_bias'],
+                bias=True,  # Copied from Sorscher et al. 2022
+            )
+            self.readout_two_layer = torch.nn.Linear(
+                in_features=self.wandb_config["n_readout_units"],
+                out_features=self.wandb_config["n_head_direction_cells"]
+                + self.wandb_config["n_place_cells"],
+                # bias=self.wandb_config['use_bias'],
+                bias=True,  # Copied from Sorscher et al. 2022
+            )
+        elif self.wandb_config["n_readout_layers"] == 1:
+            self.readout_layer = torch.nn.Linear(
+                in_features=self.wandb_config["n_hidden_units"],
+                out_features=self.wandb_config["n_head_direction_cells"]
+                + self.wandb_config["n_place_cells"],
+                # bias=self.wandb_config['use_bias'],
+                bias=True,
+            )
         assert 0.0 < self.wandb_config["keep_prob"] <= 1.0
         self.dropout_layer = torch.nn.Dropout(
             p=1.0 - self.wandb_config["keep_prob"],
@@ -554,9 +566,16 @@ class SorscherRecurrentNetwork(pl.LightningModule):
         )
 
         lstm_activations, _ = self.recurrent_layer(recurrent_inputs, initial_state)
-        g_activations = self.readout_one_layer(lstm_activations)
-        hd_and_pc_logits = self.readout_two_layer(self.dropout_layer(g_activations))
-        pos_logits = self.position_layer(g_activations)
+        if self.wandb_config["n_readout_layers"] == 1:
+            g_activations = None
+            hd_and_pc_logits = self.readout_layer(lstm_activations)
+        elif self.wandb_config["n_readout_layers"] == 2:
+            g_activations = self.readout_one_layer(lstm_activations)
+            hd_and_pc_logits = self.readout_two_layer(self.dropout_layer(g_activations))
+        else:
+            raise ValueError("n_readout_layers must be 1 or 2")
+
+        pos_logits = self.position_layer(lstm_activations)
 
         forward_results = {
             "lstm_activations": lstm_activations,

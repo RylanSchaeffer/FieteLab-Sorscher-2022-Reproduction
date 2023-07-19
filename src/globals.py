@@ -21,6 +21,8 @@ default_config = {
     "n_batches_per_epoch": 100,
     "n_head_direction_cells": 12,
     "n_hidden_units": 32,
+    "n_readout_layers": 1,
+    # "n_readout_layers": 2,
     "n_readout_units": 64,
     "n_place_cells": 72,
     "optimizer": "adam",
