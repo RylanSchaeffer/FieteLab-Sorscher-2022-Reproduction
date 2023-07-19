@@ -66,7 +66,7 @@ checkpoint_callback = ModelCheckpoint(
 
 callbacks = [
     lr_monitor_callback,
-    checkpoint_callback,
+    # checkpoint_callback,  # Don't need to save these models.
 ]
 # if torch.cuda.is_available():
 #     accelerator = 'cuda'
