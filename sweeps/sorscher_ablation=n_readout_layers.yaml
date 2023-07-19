@@ -32,7 +32,7 @@ parameters:
   n_place_cells:
     values: [256]
   n_readout_layers:
-    values: [1]
+    values: [1, 2]
   n_readout_units:
     values: [512]
   optimizer:
