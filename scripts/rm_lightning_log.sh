@@ -7,11 +7,11 @@
 # Retrieve the input string from the command line argument
 string_prefix="$1"
 
-# Load any necessary modules or set environment variables here
+echo $string_prefix
 
 # Change to the desired directory containing the files
 cd /om2/user/rylansch/FieteLab-Sorscher-2022-Reproduction/lightning_logs
 
 # Remove files starting with the input string
-rm -rf "${string_prefix}"*
+rm -rf "${string_prefix}"
 

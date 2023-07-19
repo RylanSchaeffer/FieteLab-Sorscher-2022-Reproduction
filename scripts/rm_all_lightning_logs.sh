@@ -1,19 +1,10 @@
 #!/bin/bash
 
-# Loop over lowercase alphabet characters
-for char in {a..z}
-do
-    sbatch scripts/rm_lightning_log.sh "$char"
-done
+cd /om2/user/rylansch/FieteLab-Sorscher-2022-Reproduction/lightning_logs
 
-# Loop over uppercase alphabet characters
-#for char in {A..Z}
-#do
-#    sbatch scripts/rm_lightning_log.sh "$char"
-#done
-
-# Loop over digits from 0 to 9
-for digit in {0..9}
+# Loop over the files in the directory
+for file in *
 do
-    sbatch scripts/rm_lightning_log.sh "$digit"
+    echo "$file"
+    sbatch ../scripts/rm_lightning_log.sh "$file"
 done
