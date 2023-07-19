@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH -p fiete
 #SBATCH -n 1                    # one node
-#SBATCH --mem=20G               # RAM
+#SBATCH --mem=12G               # RAM
 #SBATCH --gres=gpu:1
-#SBATCH --constraint=16GB
+#SBATCH --constraint=12GB
 #SBATCH --time=2-00:00:00         # total run time limit (D-HH:MM:SS)
 #SBATCH --mail-type=FAIL
 
