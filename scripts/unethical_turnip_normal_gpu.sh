@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -n 1                    # one node
-#SBATCH --mem=12G               # RAM
+#SBATCH --mem=8G               # RAM
 #SBATCH --gres=gpu:1
-#SBATCH --constraint=12GB
+#SBATCH --constraint=8GB
 #SBATCH --time=36:00:00         # total run time limit (D-HH:MM:SS)
 #SBATCH --mail-type=FAIL
 

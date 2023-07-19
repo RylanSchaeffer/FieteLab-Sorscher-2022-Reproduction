@@ -31,6 +31,8 @@ parameters:
     values: [512]
   n_place_cells:
     values: [256]
+  n_readout_layers:
+    values: [2]
   n_readout_units:
     values: [512]
   optimizer:
