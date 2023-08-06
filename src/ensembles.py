@@ -131,7 +131,7 @@ class HeadDirectionCellEnsemble(CellEnsemble, pl.LightningModule):
     def __init__(
         self,
         n_cells: int,
-        concentration: float = 20,
+        concentration: float = 20.0,
         soft_targets: str = "softmax",
         soft_init: str = "softmax",
     ):
