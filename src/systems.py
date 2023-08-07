@@ -305,6 +305,8 @@ class GridCellSystem(pl.LightningModule):
 
         if self.wandb_config["target_var"] == "pc_hd":
             total_loss = pc_loss + hd_loss
+        elif self.wandb_config["target_var"] == "pc":
+            total_loss = pc_loss
         elif self.wandb_config["target_var"] == "pos":
             total_loss = pos_loss
         else:
@@ -328,7 +330,7 @@ class GridCellSystem(pl.LightningModule):
         pos_logits: torch.Tensor,
         num_top_pcs: int = 3,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        if self.wandb_config["target_var"] == "pc_hd":
+        if self.wandb_config["target_var"] in {"pc_hd", "pc"}:
             _, top_k_indices = torch.topk(pc_logits, k=num_top_pcs, dim=2)
 
             # Make sure top_k_indices is of type long, as it's required for indexing

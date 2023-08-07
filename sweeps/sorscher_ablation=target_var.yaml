@@ -48,7 +48,7 @@ parameters:
   shuffle_train:
     values: [True]
   target_var:
-    values: [ "pc_hd", "pos" ]
+    values: [ "pc_hd", "pc", "pos" ]
   use_bias:
     values: [True]
   weight_decay:
