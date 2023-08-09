@@ -27,6 +27,7 @@ default_config = {
     "n_readout_units": 64,
     "n_place_cells": 72,
     "optimizer": "adam",
+    "place_cell_normalization": "lse",
     "place_cell_rf": 0.05,
     "precision": 32,
     "rnn_type": "lstm",

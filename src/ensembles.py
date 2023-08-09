@@ -93,6 +93,7 @@ class PlaceCellEnsemble(CellEnsemble, pl.LightningModule):
         stdev: float = 0.35,
         pos_min: float = -5.0,
         pos_max: float = 5,
+        normalization: str = "lse",
         soft_targets: str = "softmax",
         soft_init: str = "softmax",
     ):
@@ -112,6 +113,8 @@ class PlaceCellEnsemble(CellEnsemble, pl.LightningModule):
         #     torch.ones((self.n_cells, 2), device=self.device) * stdev * stdev,
         #     requires_grad=False)
         self.variances = stdev * stdev
+        assert normalization in {"lse", "lse_no_grad", "none", "max"}
+        self.normalization = normalization
 
     def unnor_logpdf(
         self,
@@ -123,6 +126,20 @@ class PlaceCellEnsemble(CellEnsemble, pl.LightningModule):
             -0.5 * torch.square(torch.linalg.norm(diff, dim=-1)) / self.variances
         )
         return unnor_logp
+
+    def log_posterior(self, x):
+        logp = self.unnor_logpdf(x)
+        if self.normalization == "none":
+            log_posteriors = logp
+        elif self.normalization == "lse":
+            log_posteriors = logp - torch.logsumexp(logp, dim=2, keepdim=True)
+        elif self.normalization == "lse_no_grad":
+            log_posteriors = logp - torch.logsumexp(logp, dim=2, keepdim=True).detach()
+        elif self.normalization == "max_no_grad":
+            log_posteriors = logp - torch.max(logp, dim=2, keepdim=True).detach()
+        else:
+            raise ValueError(f"Unknown normalization: {self.normalization}")
+        return log_posteriors
 
 
 class HeadDirectionCellEnsemble(CellEnsemble, pl.LightningModule):
