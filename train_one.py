@@ -93,7 +93,7 @@ trainer = pl.Trainer(
     accelerator="auto",
     accumulate_grad_batches=wandb_config["accumulate_grad_batches"],
     callbacks=callbacks,
-    check_val_every_n_epoch=50,
+    check_val_every_n_epoch=wandb_config["check_val_every_n_epoch"],
     default_root_dir=run_checkpoint_dir,
     deterministic=True,
     devices="auto",
@@ -104,6 +104,7 @@ trainer = pl.Trainer(
     # overfit_batches=1,  # useful for debugging
     gradient_clip_val=wandb_config["gradient_clip_val"],
     max_epochs=wandb_config["n_epochs"],
+    num_sanity_val_steps=-1,  # Runs all of validation before starting to train.
     # profiler="simple",  # Simplest profiler
     # profiler="advanced",  # More advanced profiler
     # profiler=PyTorchProfiler(filename=),  # PyTorch specific profiler

@@ -5,6 +5,7 @@ default_config = {
     "bin_side_in_m": 0.05,
     "box_height_in_m": 2.2,
     "box_width_in_m": 2.2,
+    "check_val_every_n_epoch": 50,
     # "data_generation": "sampled_at_beginning",
     "data_generation": "sampled_at_every_step",
     "dt": 0.02,
