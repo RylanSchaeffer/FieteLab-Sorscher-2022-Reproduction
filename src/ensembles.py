@@ -127,7 +127,7 @@ class PlaceCellEnsemble(CellEnsemble, pl.LightningModule):
         )
         return unnor_logp
 
-    def log_posterior(self, x):
+    def log_posterior(self, x: torch.Tensor):
         logp = self.unnor_logpdf(x)
         if self.normalization == "none":
             log_posteriors = logp
