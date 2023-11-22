@@ -30,14 +30,13 @@ I also needed to install an additional system component via conda:
 
 `conda install libgcc`
 
-
-
-
 `pip3 install torch torchvision torchaudio`
 
+## Running
 
+### 
 
-## Creating a Sweep
+### Running via W&B Sweep
 
 To create a sweep, run the following command at the CLI:
 
@@ -61,10 +60,4 @@ A sensible way to parallelize is to launch multiple jobs on a cluster, where eac
 So for instance, if we're running on a SLURM cluster, each SLURM job should create 1 agent.
 Rylan has code for this.
 
-
-
-## TODOs
-
-
-## License
 
