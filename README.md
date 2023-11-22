@@ -83,3 +83,7 @@ Rylan has code for this.
 ## Analysis
 
 For analysis code, see `notebooks/`.
+
+## Contact
+
+Questions? Comments? Interested in collaborating? Open an issue or email rylanschaeffer@gmail.com.
