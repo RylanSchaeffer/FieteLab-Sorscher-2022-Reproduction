@@ -16,7 +16,7 @@ runs_configs_and_results_df = src.analyze.download_wandb_project_runs_configs(
     wandb_project_path="sorscher-2022-reproduction",
     data_dir=data_dir,
     sweep_ids=[
-        "yrspxhq4",  # Dropout
+        "7csm6z92",  # Learning Rate
     ],
     refresh=False,
     user="rylan",
@@ -31,7 +31,7 @@ grid_score_percentile_columns = [
     "g/score_90_quant=0.75",
     "g/score_90_quant=0.5",
 ]
-other_columns = ["keep_prob", "seed", "train/pos_decoding_err_in_cm"]
+other_columns = ["learning_rate", "seed", "train/pos_decoding_err_in_cm"]
 
 position_decoding_err_and_grid_scores_df = runs_configs_and_results_df[
     other_columns + grid_score_percentile_columns
@@ -47,24 +47,22 @@ position_decoding_err_and_grid_scores_melted_df[
 ] = position_decoding_err_and_grid_scores_melted_df.apply(
     lambda row: float(row["grid_score_percentile"].split("=")[1]), axis=1
 )
-position_decoding_err_and_grid_scores_melted_df["dropout_probability"] = (
-    1.0 - position_decoding_err_and_grid_scores_melted_df["keep_prob"]
-)
 
 plt.close()
 g = sns.lineplot(
     data=position_decoding_err_and_grid_scores_melted_df,
-    x="dropout_probability",
+    x="learning_rate",
     y="grid_score",
     hue="grid_score_percentile",
 )
-plt.xlabel("Dropout Probability")
+plt.xlabel("Learning Rate")
 plt.ylabel(r"$90^{\circ}$ Grid Score")
-# g.set(xscale="log")
+g.set(xscale="log")
 g.legend_.set_title("Grid Score Percentile")
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir, plot_title="score_90_vs_keep_prob_by_grid_score_percentile"
+    plot_dir=results_dir,
+    plot_title="score_90_vs_learning_rate_by_grid_score_percentile",
 )
 plt.show()
 
@@ -72,17 +70,17 @@ plt.show()
 plt.close()
 g = sns.lineplot(
     data=position_decoding_err_and_grid_scores_melted_df,
-    x="dropout_probability",
+    x="learning_rate",
     y="train/pos_decoding_err_in_cm",
 )
-plt.xlabel("Dropout Probability")
+plt.xlabel("Learning Rate")
 plt.ylabel("Position Decoding Error (cm)")
-g.set(ylim=(0, 110))
+g.set(xscale="log", ylim=(0, 110))
 # Add dotted black horizontal line at 15 cm.
 g.axhline(y=15, color="black", linestyle="--")
 src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir, plot_title="pos_decoding_err_vs_keep_prob"
+    plot_dir=results_dir, plot_title="pos_decoding_err_vs_learning_rate"
 )
 plt.show()
 
-print("Finished 01_learning_rate!")
+print("Finished 00_dropout!")
