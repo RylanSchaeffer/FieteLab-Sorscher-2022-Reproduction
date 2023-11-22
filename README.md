@@ -8,8 +8,8 @@ Disentangling Fact from Grid Cell Fiction in Trained Deep Path Integrators.
 As background, our NeurIPS 2022 paper [No free lunch from deep learning in neuroscience: A case study through models of the entorhinal-hippocampal circuit](https://proceedings.neurips.cc/paper_files/paper/2022/file/66808849a9f5d8e2d00dbdc844de6333-Paper-Conference.pdf)
 was unable to reproduce key findings of Sorscher et al. NeurIPS 2019 [A unified theory for the origin of grid cells through
 the lens of pattern formation](https://ganguli-gang.stanford.edu/pdf/19.DecodePattern.pdf).
-[Code was subsequently released](https://github.com/ganguli-lab/grid-pattern-formation/blob/master/square_grid_cells.ipynb) by Sorscher et al.
-after the NeurIPS 2022 review process; however, it was implemented in a deprecated version of TensorFlow (1.14.0),
+After the NeurIPS 2022 review process, [code subsequently released](https://github.com/ganguli-lab/grid-pattern-formation/blob/master/square_grid_cells.ipynb)
+by Sorscher et al.; however, it was implemented in a deprecated version of TensorFlow (1.14.0),
 so we reproduced it here using PyTorch and PyTorch Lightning, then integrated W&Bs to sweep hyperparameters and 
 log results for further analysis.
 
