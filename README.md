@@ -6,12 +6,12 @@ Disentangling Fact from Grid Cell Fiction in Trained Deep Path Integrators.
 ![](figures/sorscher_rebuttal.png)
 
 As background, our NeurIPS 2022 paper [No free lunch from deep learning in neuroscience: A case study through models of the entorhinal-hippocampal circuit](https://proceedings.neurips.cc/paper_files/paper/2022/file/66808849a9f5d8e2d00dbdc844de6333-Paper-Conference.pdf)
-was unable to reproduce key findings of Sorscher et al. 2019's (NeurIPS 2019) [A unified theory for the origin of grid cells through
+was unable to reproduce key findings of Sorscher et al. NeurIPS 2019 [A unified theory for the origin of grid cells through
 the lens of pattern formation](https://ganguli-gang.stanford.edu/pdf/19.DecodePattern.pdf).
 [Code was subsequently released](https://github.com/ganguli-lab/grid-pattern-formation/blob/master/square_grid_cells.ipynb) by Sorscher et al.
-However, it was implemented in a Colab notebook using a deprecated version of TensorFlow (1.14.0),
-so we reproduce it using PyTorch and PyTorch Lightning, then integrated W&Bs to sweep hyperparameter space.
-
+after the NeurIPS 2022 review process; however, it was implemented in a deprecated version of TensorFlow (1.14.0),
+so we reproduced it here using PyTorch and PyTorch Lightning, then integrated W&Bs to sweep hyperparameters and 
+log results for further analysis.
 
 ## Setup
 
@@ -80,4 +80,6 @@ A sensible way to parallelize is to launch multiple jobs on a cluster, where eac
 So for instance, if we're running on a SLURM cluster, each SLURM job should create 1 agent.
 Rylan has code for this.
 
+## Analysis
 
+For analysis code, see `notebooks/`.
