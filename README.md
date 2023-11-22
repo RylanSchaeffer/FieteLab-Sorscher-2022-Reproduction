@@ -86,4 +86,5 @@ For analysis code, see `notebooks/`.
 
 ## Contact
 
-Questions? Comments? Interested in collaborating? Open an issue or email rylanschaeffer@gmail.com.
+Questions? Comments? Interested in collaborating? Open an issue or email Rylan Schaeffer (rylanschaeffer@gmail.com)
+and cc Mikail Khona (mikail@mit.edu) and Ila Fiete (fiete@mit.edu).
