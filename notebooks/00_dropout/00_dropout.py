@@ -60,11 +60,28 @@ g = sns.lineplot(
 )
 plt.xlabel("Dropout Probability")
 plt.ylabel(r"$90^{\circ}$ Grid Score")
-g.set(xscale="log")
+# g.set(xscale="log")
 g.legend_.set_title("Grid Score Percentile")
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir, plot_title="score_90_vs_keep_prob_by_grid_score_percentile"
+)
+plt.show()
+
+
+plt.close()
+g = sns.lineplot(
+    data=position_decoding_err_and_grid_scores_melted_df,
+    x="dropout_probability",
+    y="train/pos_decoding_err_in_cm",
+)
+plt.xlabel("Dropout Probability")
+plt.ylabel("Position Decoding Error (cm)")
+g.set(ylim=(0, 110))
+# Add dotted black horizontal line at 15 cm.
+g.axhline(y=15, color="black", linestyle="--")
+src.plot.save_plot_with_multiple_extensions(
+    plot_dir=results_dir, plot_title="pos_decoding_err_vs_keep_prob"
 )
 plt.show()
 
