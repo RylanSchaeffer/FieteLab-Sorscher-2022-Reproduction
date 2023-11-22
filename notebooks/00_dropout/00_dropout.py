@@ -61,7 +61,7 @@ g = sns.lineplot(
 plt.xlabel("Dropout Probability")
 plt.ylabel(r"$90^{\circ}$ Grid Score")
 # g.set(xscale="log")
-g.legend_.set_title("Grid Score Percentile")
+g.legend_.set_title("Grid Score Distribution\nPercentile")
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
     plot_dir=results_dir, plot_title="score_90_vs_keep_prob_by_grid_score_percentile"
