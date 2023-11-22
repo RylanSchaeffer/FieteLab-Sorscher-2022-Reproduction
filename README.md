@@ -1,6 +1,6 @@
 # Fiete Lab Sorscher 2022 Reproduction
 
-This repository contains a subset of code contained withour our recent preprint
+This repository contains a subset of code from our forthcoming preprint:
 Disentangling Fact from Grid Cell Fiction in Trained Deep Path Integrators.
 
 ![](figures/sorscher_rebuttal.png)
