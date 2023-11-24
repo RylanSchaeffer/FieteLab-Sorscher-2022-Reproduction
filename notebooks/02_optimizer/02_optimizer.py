@@ -64,12 +64,12 @@ g = sns.lineplot(
     y="grid_score",
     hue="optimizer",
 )
-plt.xlabel("Optimizer")
+plt.xlabel("Grid Score Distribution Percentile")
 plt.ylabel(r"$90^{\circ}$ Grid Score")
 g.legend_.set_title("Grid Score Distribution\nPercentile")
 sns.move_legend(g, "upper left", bbox_to_anchor=(1, 1))
 src.plot.save_plot_with_multiple_extensions(
-    plot_dir=results_dir, plot_title="score_90_vs_optimizer_by_grid_score_percentile"
+    plot_dir=results_dir, plot_title="score_90_vs_grid_score_percentile_by_optimizer"
 )
 plt.show()
 
